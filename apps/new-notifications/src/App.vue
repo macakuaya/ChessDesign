@@ -139,30 +139,11 @@
                 size="small"
               />
             </div>
-            <!-- Comment roll -->
-            <template v-if="n.rollup">
-              <div
-                v-show="!n.rollup.expanded"
-                class="notif-roll"
-                @click.stop="n.rollup.expanded = true"
-              >
-                <cc-avatar :src="n.rollup.avatar" :size="24" click-behavior="none" :is-lazy-loading="false" />
-                <span class="notif-roll-text cc-text-small">{{ n.rollup.text }}</span>
-              </div>
-              <div v-show="n.rollup.expanded" class="notif-comments">
-                <div
-                  v-for="c in n.rollup.comments"
-                  :key="c.id"
-                  class="notif-comment"
-                >
-                  <cc-avatar :src="c.avatar" :size="24" click-behavior="none" :is-lazy-loading="false" />
-                  <div class="notif-comment-content">
-                    <span class="notif-comment-user cc-text-medium-bold">{{ c.username }}</span>
-                    <span class="notif-comment-body cc-text-small">{{ c.body }}</span>
-                  </div>
-                </div>
-              </div>
-            </template>
+            <!-- Comment roll (non-interactive) -->
+            <div v-if="n.rollup" class="notif-roll">
+              <cc-avatar :src="n.rollup.avatar" :size="24" click-behavior="none" :is-lazy-loading="false" />
+              <span class="notif-roll-text cc-text-small">{{ n.rollup.text }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -259,9 +240,6 @@ const avatars = {
 const categories = [
   { id: 'demo', label: 'Demo' },
   { id: 'clubs', label: 'Clubs' },
-  { id: 'games-challenges', label: 'Games — Challenges' },
-  { id: 'games-active', label: 'Games — Active Games' },
-  { id: 'games-competitions', label: 'Games — Competitions' },
   { id: 'social', label: 'Social' },
   { id: 'achievements', label: 'Achievements & Rewards' },
   { id: 'other', label: 'Other' },
@@ -270,7 +248,6 @@ const categories = [
 function buildCategoryData() {
   return {
     demo: [
-      { id: 'demo-1', type: 'Game Seek (Daily)', title: 'MagnusCarlsen', body: 'Wants to play Daily', time: '6h', avatar: avatars.magnus, unread: true, hasActions: true, rollup: null },
       { id: 'demo-2', type: 'Team Match', title: 'CHESScom', body: 'A new Team Match is starting', time: '23h', avatar: avatars.chesscom, unread: true, hasActions: false, rollup: null },
       { id: 'demo-3', type: 'New Comment (Rollup)', title: 'Barcelona Chess Club', body: '3 new comments', time: '1d', avatar: avatars.barcelona, unread: false, hasActions: false,
         rollup: { avatar: avatars.barcelona, text: '+2 more comments', expanded: false, comments: [
@@ -284,6 +261,7 @@ function buildCategoryData() {
 
     clubs: [
       { id: 'club-1', type: 'Club News', title: 'Barcelona Chess Club', body: 'Posted news', time: '2h', avatar: avatars.barcelona, unread: true, hasActions: false, rollup: null },
+      { id: 'club-4', type: 'Club Join Request', title: 'Barcelona Chess Club', body: 'NihalSarin wants to join', time: '3h', avatar: avatars.barcelona, unread: true, hasActions: true, rollup: null },
       { id: 'club-2', type: 'Club Note', title: 'Team USA', body: 'Has a new Note', time: '5h', avatar: avatars.teamusa, unread: true, hasActions: false,
         rollup: { avatar: avatars.teamusa, text: '+3 new notes this week', expanded: false, comments: [
           { id: 'cn1', avatar: avatars.teamusa, username: 'Team USA Admin', body: 'Weekly tournament schedule has been updated.' },
@@ -296,35 +274,6 @@ function buildCategoryData() {
           { id: 'cf2', avatar: avatars.chessbrah, username: 'chessbrah', body: 'Analyzing our last team match results' },
         ]},
       },
-      { id: 'club-4', type: 'Club Join Request', title: 'Barcelona Chess Club', body: 'NihalSarin wants to join', time: '3h', avatar: avatars.barcelona, unread: true, hasActions: true, rollup: null },
-    ],
-
-    'games-challenges': [
-      { id: 'gc-1', type: 'Game Seek (Daily)', title: 'MagnusCarlsen', body: 'Wants to play Daily', time: '6h', avatar: avatars.magnus, unread: true, hasActions: true, rollup: null },
-      { id: 'gc-2', type: 'Live Challenge', title: 'HikaruNakamura', body: 'Wants to play Blitz 3+0', time: '2m', avatar: avatars.hikaru, unread: true, hasActions: true, rollup: null },
-    ],
-
-    'games-active': [
-      { id: 'ga-1', type: 'Game Started', title: "It's your move!", body: 'Your game with FabianoCaruana (2820) has started!', time: '1m', avatar: avatars.fabiano, unread: true, hasActions: false, rollup: null },
-      { id: 'ga-2', type: 'Your Move (Daily)', title: "It's your move!", body: 'DanielNaroditsky played Nf3.', time: '4h', avatar: avatars.naroditsky, unread: true, hasActions: false, rollup: null },
-      { id: 'ga-3', type: 'Game Low On Time', title: 'AnishGiri', body: 'Your game against AnishGiri is running out of time. Make your move!', time: '30m', avatar: avatars.anishgiri, unread: true, hasActions: false, rollup: null },
-      { id: 'ga-4', type: 'Draw Offered', title: 'PenguinGM', body: 'Offered a Draw', time: '15m', avatar: avatars.penguin, unread: true, hasActions: true, rollup: null },
-      { id: 'ga-5', type: 'Chat Message Sent', title: 'GMWso (2650) messaged you', body: 'Good game! That endgame was really tricky.', time: '2h', avatar: avatars.wesley, unread: false, hasActions: false, rollup: null },
-      { id: 'ga-6', type: 'Game Finished', title: 'You won!', body: 'You beat chessbrah by resignation.', time: '1d', avatar: avatars.chessbrah, unread: false, hasActions: false, rollup: null },
-    ],
-
-    'games-competitions': [
-      { id: 'gcomp-1', type: 'Team Match', title: 'Team Match "Barcelona vs Team USA" Has Started', body: 'Click to view the match', time: '1h', avatar: avatars.teamusa, unread: true, hasActions: false, rollup: null },
-      { id: 'gcomp-2', type: 'Tournament Game', title: "It's your move!", body: 'Your tournament game with RPragChess has started.', time: '3h', avatar: avatars.rprag, unread: true, hasActions: false, rollup: null },
-      { id: 'gcomp-3', type: 'Team Live Competition', title: 'Champions Chess Tour', body: 'Starts in 30 minutes', time: '30m', avatar: avatars.chesscom, unread: true, hasActions: false, rollup: null },
-      { id: 'gcomp-4', type: 'Vote Chess Game', title: 'Barcelona vs Team USA', body: 'Has an update', time: '6h', avatar: avatars.barcelona, unread: false, hasActions: false,
-        rollup: { avatar: avatars.barcelona, text: 'Votechess game has 4 updates', expanded: false, comments: [
-          { id: 'vc1', avatar: avatars.gotham, username: 'GothamChess', body: 'I voted for Bb5 — pins the knight and keeps pressure.' },
-          { id: 'vc2', avatar: avatars.botez, username: 'BotezLive', body: 'What about d4? Opens up the center nicely.' },
-          { id: 'vc3', avatar: avatars.naroditsky, username: 'DanielNaroditsky', body: 'Bb5 is stronger here. After d4 exd4, Black gets counterplay.' },
-          { id: 'vc4', avatar: avatars.anna, username: 'AnnaCramling', body: 'I agree with Bb5. Let\'s keep the tension on the kingside.' },
-        ]},
-      },
     ],
 
     social: [
@@ -335,9 +284,8 @@ function buildCategoryData() {
         ]},
       },
       { id: 'soc-2', type: 'New Content', title: 'GothamChess', body: 'Has a new post', time: '4h', avatar: avatars.gotham, unread: true, hasActions: false, rollup: null },
-      { id: 'soc-3', type: 'Profile Notes', title: 'BotezLive', body: 'Left a note on your profile', time: '1d', avatar: avatars.botez, unread: false, hasActions: false, rollup: null },
-      { id: 'soc-4', type: 'Friend Request', title: 'NihalSarin', body: 'Wants to be friends', time: '6h', avatar: avatars.nihal, unread: true, hasActions: true, rollup: null },
       { id: 'soc-5', type: 'Friend Activity', title: 'DanielNaroditsky', body: 'Has achieved a rating of 2830 in Blitz', time: '12h', avatar: avatars.naroditsky, unread: false, hasActions: false, rollup: null },
+      { id: 'soc-3', type: 'Profile Notes', title: 'BotezLive', body: 'Left a note on your profile', time: '1d', avatar: avatars.botez, unread: false, hasActions: false, rollup: null },
       { id: 'soc-6', type: 'Contact Match', title: 'Anna Cramling is Now on Chess.com!', body: 'Add Anna as a friend, and challenge them to a game!', time: '2d', avatar: avatars.anna, unread: false, hasActions: false, rollup: null },
     ],
 
@@ -856,16 +804,11 @@ body.dark-mode {
   display: flex;
   gap: 8px;
   align-items: center;
-  padding: 4px;
-  background: var(--color-bg-subtlest, rgba(255,255,255,0.02));
+  padding: 0;
+  background: unset;
   border-radius: 3px;
   width: 100%;
   box-sizing: border-box;
-  cursor: pointer;
-}
-
-.notif-roll:hover {
-  background: var(--color-bg-subtle, rgba(255,255,255,0.1));
 }
 
 .notif-roll-text {

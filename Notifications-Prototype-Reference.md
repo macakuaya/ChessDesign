@@ -109,3 +109,16 @@ All notification types visible in the navbar bell icon, Play tab, and Friends ta
 | **Achievement badge** | Achievement notifications |
 | **Glyph icon** | New Comment (icon varies by content type) |
 | **Category icon** | Insights (fallback when no image provided) |
+
+---
+
+## Where the Copy Lives
+
+| Layer | File | Role |
+|---|---|---|
+| **Translation strings** | `Chesscom/chess/app/Resources/assets/js/translations/messages.en_US.json` | All user-facing text (i18n) |
+| **Frontend formatting** | `Chesscom/chess/client/shared/extensions/alerts/utils/generate-message.ts` | Maps notification types → title + body copy |
+| **Type constants** | `Chesscom/chess/client/shared/extensions/alerts/types/index.ts` | Notification type IDs |
+| **Backend payloads** | `Chesscom/chess/src/Chess/CoreBundle/Notification/` (PHP classes) | Creates notification data server-side |
+| **Android strings** | `Chesscom/android/appstrings/src/main/res/values/notifications.xml` | Mobile push copy |
+| **iOS strings** | `Chesscom/ios-main/Chess.com/Classes/Chess/Extensions/String/String+Notifications.swift` | Mobile push copy |
