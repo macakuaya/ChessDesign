@@ -174,18 +174,11 @@
     <main class="page-content" @click="showNotifications = false">
     </main>
 
-    <!-- Menu button top right -->
-    <button class="menu-button" aria-label="Menu" @click="showPrototypeMenu = true">
-      <CcIcon name="mark-menu" :size="24" />
-    </button>
-
     <!-- Prototype Navigation Menu -->
     <PrototypeMenu
-      :open="showPrototypeMenu"
       :selected-category="selectedCategory"
       :categories="categories"
       :notification-names="notificationNames"
-      @close="showPrototypeMenu = false"
       @select="(id) => selectedCategory = id"
       @highlight="highlightNotification"
     />
@@ -213,8 +206,7 @@ const mainLinks = [
 const showNotifications = ref(false)
 const notificationCount = ref(2)
 const showUnreadOnly = ref(false)
-const showPrototypeMenu = ref(false)
-const selectedCategory = ref('demo')
+const selectedCategory = ref('clubs')
 const highlightedId = ref(null)
 
 const avatars = {
@@ -238,8 +230,8 @@ const avatars = {
 }
 
 const categories = [
-  { id: 'demo', label: 'Demo' },
   { id: 'clubs', label: 'Clubs' },
+  { id: 'games', label: 'Games' },
   { id: 'social', label: 'Social' },
   { id: 'achievements', label: 'Achievements & Rewards' },
   { id: 'other', label: 'Other' },
@@ -247,27 +239,16 @@ const categories = [
 
 function buildCategoryData() {
   return {
-    demo: [
-      { id: 'demo-2', type: 'Team Match', title: 'CHESScom', body: 'A new Team Match is starting', time: '23h', avatar: avatars.chesscom, unread: true, hasActions: false, rollup: null },
-      { id: 'demo-3', type: 'New Comment (Rollup)', title: 'Barcelona Chess Club', body: '3 new comments', time: '1d', avatar: avatars.barcelona, unread: false, hasActions: false,
-        rollup: { avatar: avatars.barcelona, text: '+2 more comments', expanded: false, comments: [
-          { id: 'c1', avatar: avatars.gotham, username: 'GothamChess', body: 'Great game analysis! The knight sacrifice on move 23 was brilliant.' },
-          { id: 'c2', avatar: avatars.botez, username: 'BotezLive', body: 'Our team should try this opening in the next match.' },
-        ]},
-      },
-      { id: 'demo-4', type: 'Your Move (Daily)', title: "It's your move!", body: 'FabianoCaruana played Nxe5.', time: '3d', avatar: avatars.fabiano, unread: false, hasActions: false, rollup: null },
-      { id: 'demo-5', type: 'Game Finished', title: 'You won!', body: 'You beat HikaruNakamura on time.', time: '40d', avatar: avatars.hikaru, unread: false, hasActions: false, rollup: null },
+    games: [
+      { id: 'game-1', type: 'Team Match', title: 'CHESScom', body: 'A new Team Match is starting', time: '23h', avatar: avatars.chesscom, unread: true, hasActions: false, rollup: null },
+      { id: 'game-2', type: 'Your Move (Daily)', title: "It's your move!", body: 'FabianoCaruana played Nxe5.', time: '3d', avatar: avatars.fabiano, unread: false, hasActions: false, rollup: null },
+      { id: 'game-3', type: 'Game Finished', title: 'You won!', body: 'You beat HikaruNakamura on time.', time: '40d', avatar: avatars.hikaru, unread: false, hasActions: false, rollup: null },
     ],
 
     clubs: [
       { id: 'club-1', type: 'Club News', title: 'Barcelona Chess Club', body: 'Posted news', time: '2h', avatar: avatars.barcelona, unread: true, hasActions: false, rollup: null },
       { id: 'club-4', type: 'Club Join Request', title: 'Barcelona Chess Club', body: 'NihalSarin wants to join', time: '3h', avatar: avatars.barcelona, unread: true, hasActions: true, rollup: null },
-      { id: 'club-2', type: 'Club Note', title: 'Team USA', body: 'Has a new Note', time: '5h', avatar: avatars.teamusa, unread: true, hasActions: false,
-        rollup: { avatar: avatars.teamusa, text: '+3 new notes this week', expanded: false, comments: [
-          { id: 'cn1', avatar: avatars.teamusa, username: 'Team USA Admin', body: 'Weekly tournament schedule has been updated.' },
-          { id: 'cn2', avatar: avatars.teamusa, username: 'Team USA Admin', body: 'Congratulations to our members who achieved new ratings!' },
-        ]},
-      },
+      { id: 'club-2', type: 'Club Note', title: 'Team USA', body: 'Has 3 new notes', time: '5h', avatar: avatars.teamusa, unread: true, hasActions: false, rollup: null },
       { id: 'club-3', type: 'Club Forum Topic', title: 'Barcelona Chess Club', body: 'Has a new topic', time: '1d', avatar: avatars.barcelona, unread: false, hasActions: false,
         rollup: { avatar: avatars.barcelona, text: '+2 new topics', expanded: false, comments: [
           { id: 'cf1', avatar: avatars.gotham, username: 'GothamChess', body: 'Best opening prep for club matches?' },
@@ -303,7 +284,7 @@ function buildCategoryData() {
 
 const categoryData = buildCategoryData()
 
-const notifications = ref([...categoryData.demo])
+const notifications = ref([...categoryData.clubs])
 
 const notificationNames = computed(() => {
   const data = categoryData[selectedCategory.value]
@@ -346,7 +327,6 @@ function toggleNotifications() {
 }
 
 function highlightNotification(id) {
-  showPrototypeMenu.value = false
   showNotifications.value = true
   notificationCount.value = 0
   highlightedId.value = null
@@ -878,30 +858,6 @@ body.dark-mode {
 .notif-footer-label {
   color: var(--color-text-default, rgba(255,255,255,0.72));
   white-space: nowrap;
-}
-
-/* -- Menu Button -- */
-
-.menu-button {
-  position: fixed;
-  top: 4px;
-  right: 4px;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  color: rgba(255, 255, 255, 0.7);
-  transition: background 0.15s ease;
-  z-index: 50;
-}
-
-.menu-button:hover {
-  background: rgba(255, 255, 255, 0.1);
 }
 
 /* -- Icon avatar fallback -- */

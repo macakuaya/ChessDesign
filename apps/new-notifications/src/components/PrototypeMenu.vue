@@ -25,19 +25,14 @@ function getSelectedLabel() {
 </script>
 
 <template>
-  <Transition name="menu">
-    <div v-if="open" class="prototype-menu-overlay" @click.self="$emit('close')">
-      <div class="prototype-menu-panel">
-        <!-- Header -->
-        <div class="panel-header">
-          <span class="panel-title">Notifications</span>
-          <button class="close-button" @click="$emit('close')">
-            <CcIcon name="mark-cross" :size="16" />
-          </button>
-        </div>
+  <div class="prototype-menu-panel">
+    <!-- Header -->
+    <div class="panel-header">
+      <span class="panel-title">Notifications</span>
+    </div>
 
-        <!-- Dropdown -->
-        <div class="panel-content">
+    <!-- Dropdown -->
+    <div class="panel-content">
           <div class="dropdown-container">
             <button class="dropdown-button" @click="dropdownOpen = !dropdownOpen">
               <span class="dropdown-label">{{ getSelectedLabel() }}</span>
@@ -81,29 +76,22 @@ function getSelectedLabel() {
               <CcIcon name="arrow-chevron-right" :size="12" class="type-item-arrow" />
             </button>
           </div>
-        </div>
-      </div>
     </div>
-  </Transition>
+  </div>
 </template>
 
 <style scoped>
-.prototype-menu-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.77);
-  z-index: 1000;
-  display: flex;
-  justify-content: flex-end;
-}
-
 .prototype-menu-panel {
-  width: 360px;
-  height: 100%;
+  width: 300px;
+  height: 100vh;
+  height: 100dvh;
   background: #262421;
-  box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.3);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
 }
 
 .panel-header {
@@ -121,24 +109,6 @@ function getSelectedLabel() {
   font-weight: 700;
   line-height: 20px;
   color: white;
-}
-
-.close-button {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: white;
-  margin-right: -12px;
-}
-
-.close-button:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 5px;
 }
 
 .panel-content {
@@ -290,47 +260,4 @@ function getSelectedLabel() {
   color: rgba(255, 255, 255, 0.5);
 }
 
-/* Transition animations */
-.menu-enter-active {
-  transition: opacity 300ms cubic-bezier(0.2, 1, 0.3, 1);
-}
-
-.menu-leave-active {
-  transition: opacity 300ms cubic-bezier(0.2, 1, 0.3, 1);
-}
-
-.menu-enter-active .prototype-menu-panel {
-  transition: transform 300ms cubic-bezier(0.2, 1, 0.3, 1);
-}
-
-.menu-leave-active .prototype-menu-panel {
-  transition: transform 300ms cubic-bezier(0.2, 1, 0.3, 1);
-}
-
-.menu-enter-active .panel-header,
-.menu-enter-active .panel-content {
-  transition: opacity 300ms cubic-bezier(0.2, 1, 0.3, 1);
-}
-
-.menu-leave-active .panel-header,
-.menu-leave-active .panel-content {
-  transition: opacity 300ms cubic-bezier(0.2, 1, 0.3, 1);
-}
-
-.menu-enter-from,
-.menu-leave-to {
-  opacity: 0;
-}
-
-.menu-enter-from .prototype-menu-panel,
-.menu-leave-to .prototype-menu-panel {
-  transform: translateX(100%);
-}
-
-.menu-enter-from .panel-header,
-.menu-enter-from .panel-content,
-.menu-leave-to .panel-header,
-.menu-leave-to .panel-content {
-  opacity: 0;
-}
 </style>
