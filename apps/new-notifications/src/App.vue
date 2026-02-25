@@ -227,6 +227,7 @@ const avatars = {
   chessbrah: 'https://images.chesscomfiles.com/uploads/v1/user/2555939.974bf39b.200x200o.b79b105ffb0e.png',
   duhless: 'https://images.chesscomfiles.com/uploads/v1/user/10174260.4865a6da.200x200o.6932fffcda21.png',
   teamusa: 'https://images.chesscomfiles.com/uploads/v1/group/6589.88736429.50x50o.968cc063a111.jpeg',
+  caleb: 'https://images.chesscomfiles.com/uploads/v1/user/211790230.6cb341d0.200x200o.6e9fcd3e24e0.png',
 }
 
 const categories = [
@@ -235,6 +236,7 @@ const categories = [
   { id: 'social', label: 'Social' },
   { id: 'achievements', label: 'Achievements & Rewards' },
   { id: 'other', label: 'Other' },
+  { id: 'rollup', label: 'Rollup Examples' },
 ]
 
 function buildCategoryData() {
@@ -249,24 +251,18 @@ function buildCategoryData() {
       { id: 'club-1', type: 'Club News', title: 'Barcelona Chess Club', body: 'Posted news', time: '2h', avatar: avatars.barcelona, unread: true, hasActions: false, rollup: null },
       { id: 'club-4', type: 'Club Join Request', title: 'Barcelona Chess Club', body: 'NihalSarin wants to join', time: '3h', avatar: avatars.barcelona, unread: true, hasActions: true, rollup: null },
       { id: 'club-2', type: 'Club Note', title: 'Team USA', body: 'Has 3 new notes', time: '5h', avatar: avatars.teamusa, unread: true, hasActions: false, rollup: null },
-      { id: 'club-3', type: 'Club Forum Topic', title: 'Barcelona Chess Club', body: 'Has a new topic', time: '1d', avatar: avatars.barcelona, unread: false, hasActions: false,
-        rollup: { avatar: avatars.barcelona, text: '+2 new topics', expanded: false, comments: [
-          { id: 'cf1', avatar: avatars.gotham, username: 'GothamChess', body: 'Best opening prep for club matches?' },
-          { id: 'cf2', avatar: avatars.chessbrah, username: 'chessbrah', body: 'Analyzing our last team match results' },
-        ]},
-      },
+      { id: 'club-3', type: 'Club Forum Topic', title: 'Barcelona Chess Club', body: 'Has 3 new topics', time: '1d', avatar: avatars.barcelona, unread: false, hasActions: false, rollup: null },
     ],
 
     social: [
-      { id: 'soc-1', type: 'New Comment', title: 'My Brilliant Game Analysis', body: '3 new comments', time: '2h', avatar: null, useIcon: 'message-bubble-fill-left', unread: true, hasActions: false,
-        rollup: { avatar: avatars.gotham, text: '+2 more comments', expanded: false, comments: [
-          { id: 'sc1', avatar: avatars.gotham, username: 'GothamChess', body: 'That sacrifice was absolutely stunning!' },
-          { id: 'sc2', avatar: avatars.anna, username: 'AnnaCramling', body: 'Can you share the PGN? Would love to study this.' },
-        ]},
+      { id: 'soc-1', type: 'New Comment', title: 'Caleb commented on your post', body: 'My Brilliant Game Analysis', time: '2h', avatar: avatars.caleb, unread: true, hasActions: false,
+        rollup: { avatar: avatars.botez, text: '+3 comments from BotezLive, chessbrah and others' },
       },
-      { id: 'soc-2', type: 'New Content', title: 'GothamChess', body: 'Has a new post', time: '4h', avatar: avatars.gotham, unread: true, hasActions: false, rollup: null },
+      { id: 'soc-2', type: 'New Content', title: 'GothamChess', body: 'Has 3 new posts', time: '4h', avatar: avatars.gotham, unread: true, hasActions: false, rollup: null },
       { id: 'soc-5', type: 'Friend Activity', title: 'DanielNaroditsky', body: 'Has achieved a rating of 2830 in Blitz', time: '12h', avatar: avatars.naroditsky, unread: false, hasActions: false, rollup: null },
-      { id: 'soc-3', type: 'Profile Notes', title: 'BotezLive', body: 'Left a note on your profile', time: '1d', avatar: avatars.botez, unread: false, hasActions: false, rollup: null },
+      { id: 'soc-3', type: 'Profile Notes', title: 'BotezLive', body: 'Left a note on your profile', time: '1d', avatar: avatars.botez, unread: false, hasActions: false,
+        rollup: { avatar: avatars.gotham, text: '+10 notes from GothamChess, chessbrah and others' },
+      },
       { id: 'soc-6', type: 'Contact Match', title: 'Anna Cramling is Now on Chess.com!', body: 'Add Anna as a friend, and challenge them to a game!', time: '2d', avatar: avatars.anna, unread: false, hasActions: false, rollup: null },
     ],
 
@@ -278,6 +274,19 @@ function buildCategoryData() {
 
     other: [
       { id: 'oth-1', type: 'Insights', title: 'Your insights are ready!', body: 'Check out your weekly performance review', time: '6h', avatar: null, useIcon: 'document-box-closed', unread: true, hasActions: false, rollup: null },
+    ],
+
+    rollup: [
+      { id: 'roll-1', type: 'Clubs · Club News (Replace)', title: 'Barcelona Chess Club', body: 'Posted news', time: '2h', avatar: avatars.barcelona, unread: true, hasActions: false, rollup: null },
+      { id: 'roll-2', type: 'Clubs · Club Note (Aggregate)', title: 'Team USA', body: 'Has 3 new notes', time: '5h', avatar: avatars.teamusa, unread: true, hasActions: false, rollup: null },
+      { id: 'roll-3', type: 'Clubs · Club Forum Topic (Aggregate)', title: 'Barcelona Chess Club', body: 'Has 3 new topics', time: '1d', avatar: avatars.barcelona, unread: false, hasActions: false, rollup: null },
+      { id: 'roll-4', type: 'Social · New Comment (Aggregate)', title: 'Caleb commented on your post', body: 'My Brilliant Game Analysis', time: '2h', avatar: avatars.caleb, unread: true, hasActions: false,
+        rollup: { avatar: avatars.botez, text: '+3 comments from BotezLive, chessbrah and others' },
+      },
+      { id: 'roll-5', type: 'Social · New Content (Aggregate)', title: 'GothamChess', body: 'Has 3 new posts', time: '4h', avatar: avatars.gotham, unread: true, hasActions: false, rollup: null },
+      { id: 'roll-6', type: 'Social · Profile Notes (Aggregate)', title: 'BotezLive', body: 'Left a note on your profile', time: '1d', avatar: avatars.botez, unread: false, hasActions: false,
+        rollup: { avatar: avatars.gotham, text: '+10 notes from GothamChess, chessbrah and others' },
+      },
     ],
   }
 }
@@ -739,9 +748,6 @@ body.dark-mode {
   flex: 1;
   min-width: 0;
   color: var(--color-text-bolder, rgba(255,255,255,0.85));
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .notif-time {
