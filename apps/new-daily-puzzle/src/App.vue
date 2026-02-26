@@ -1325,8 +1325,8 @@ onUnmounted(() => {
             />
           </div>
 
-          <!-- Hearts + Timer -->
-          <div class="hearts-timer-row">
+          <!-- Hearts + Timer (hidden during intro) -->
+          <div v-if="puzzlePhase !== 'intro'" class="hearts-timer-row">
             <div class="hearts">
               <CcIcon 
                 v-for="i in puzzle.results.totalLives" 
