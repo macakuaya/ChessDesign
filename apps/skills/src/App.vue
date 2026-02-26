@@ -271,37 +271,44 @@ const skillEarnedData = ref({
 
 // Skills list for bottom sheet (reactive to earned skills)
 // Only Royal Fork, Queen Sacrifice, Rook Sacrifice are active - rest are locked
+// Skill Point Earned: 2 active, 4 mastered, 2 inactive
 const skillsList = computed(() => [
+  // Active
   { name: 'Royal Fork', current: 9, max: 10, icon: 'royal-fork' },
-  { name: 'Queen Sacrifice', current: queenSacrificeCount.value, max: 10, icon: 'queen-sacrifice' },
-  { name: 'Rook Sacrifice', current: rookSacrificeCount.value, max: 10, icon: 'rook-sacrifice' },
-  { name: 'Skewer', current: 0, max: 10, icon: null, locked: true },
-  { name: 'Knight Fork', current: 0, max: 10, icon: null, locked: true },
-  { name: 'Fork', current: 0, max: 10, icon: null, locked: true },
-  { name: 'Defend Piece', current: 0, max: 10, icon: null, locked: true },
-  { name: 'Check', current: 0, max: 10, icon: null, locked: true },
-  { name: 'Capture', current: 0, max: 10, icon: null, locked: true },
+  { name: 'Queen Sacrifice', current: queenSacrificeCount.value, max: 10, icon: 'queen-sacrifice', active: true },
+  // Mastered
+  { name: 'Rook Sacrifice', current: 10, max: 10, icon: 'rook-sacrifice', completed: true },
+  { name: 'Skewer', current: 10, max: 10, icon: 'skewer', completed: true },
+  { name: 'Knight Fork', current: 10, max: 10, icon: 'knight-fork', completed: true },
+  { name: 'Fork', current: 10, max: 10, icon: 'fork', completed: true },
+  // Inactive
+  { name: 'Defend Piece', current: 0, max: 10, icon: 'defend-piece' },
+  { name: 'Check', current: 0, max: 10, icon: 'check' },
 ])
 
-// FTUE skills list - basic skills for first time user (only first 3 visible)
+// FTUE skills list - all active at 0/10
 const ftueSkillsList = computed(() => [
-  { name: 'Capture', current: captureCount.value, max: 10, icon: 'capturing-dark-bishop' },
-  { name: 'Check', current: checkCount.value, max: 10, icon: 'check' },
-  { name: 'Checkmate', current: checkmateCount.value, max: 10, icon: 'checkmate-dark' },
+  { name: 'Capture', current: captureCount.value, max: 10, icon: 'capturing-dark-bishop', active: true },
+  { name: 'Check', current: checkCount.value, max: 10, icon: 'check', active: true },
+  { name: 'Checkmate', current: checkmateCount.value, max: 10, icon: 'checkmate-dark', active: true },
 ])
 
-// End of FTUE skills list - Checkmate first (in progress), then completed skills
+// End of FTUE skills list: active first, then mastered
 const endOfFtueSkillsList = computed(() => [
-  { name: 'Checkmate', current: checkmateCount.value, max: 10, icon: 'checkmate-dark' },
+  // Active
+  { name: 'Checkmate', current: checkmateCount.value, max: 10, icon: 'checkmate-dark', active: true },
+  // Mastered
   { name: 'Capture', current: 10, max: 10, icon: 'capturing-dark-bishop', completed: true },
   { name: 'Check', current: 10, max: 10, icon: 'check', completed: true },
 ])
 
-// End of FTUE skills list AFTER celebration - new skills unlocked with tabs
+// End of FTUE after celebration: active (new unlocked) first, then inactive (locked)
 const endOfFtueAfterCelebrationSkillsList = computed(() => [
-  { name: 'Recapture', current: 0, max: 10, icon: 'capturing-dark-bishop' },
-  { name: 'Winning Capture', current: 0, max: 10, icon: 'capturing-dark-bishop' },
-  { name: 'Blocks Attack', current: 0, max: 10, icon: 'check' },
+  // Active (newly unlocked, 0/10)
+  { name: 'Recapture', current: 0, max: 10, icon: 'capturing-dark-bishop', active: true },
+  { name: 'Winning Capture', current: 0, max: 10, icon: 'capturing-dark-bishop', active: true },
+  { name: 'Blocks Attack', current: 0, max: 10, icon: 'check', active: true },
+  // Inactive (locked)
   { name: 'Skewer', current: 0, max: 10, icon: null, locked: true },
   { name: 'Knight Fork', current: 0, max: 10, icon: null, locked: true },
   { name: 'Fork', current: 0, max: 10, icon: null, locked: true },
@@ -311,15 +318,33 @@ const endOfFtueAfterCelebrationSkillsList = computed(() => [
 ])
 
 // Mastered Skill skills list - Rook Sacrifice starts at 8/10, will master after 2 sacrifices
-const masteredSkillSkillsList = computed(() => [
-  { name: 'Royal Fork', current: 9, max: 10, icon: 'royal-fork' },
-  { name: 'Rook Sacrifice', current: rookSacrificeCount.value, max: 10, icon: 'rook-sacrifice' },
-  { name: 'Skewer', current: 1, max: 10, icon: null },
-])
+const masteredSkillSkillsList = computed(() => {
+  const rookMastered = rookSacrificeCount.value >= 10
+  const active = [
+    { name: 'Royal Fork', current: 9, max: 10, icon: 'royal-fork' },
+    { name: 'Rook Sacrifice', current: rookSacrificeCount.value, max: 10, icon: 'rook-sacrifice', completed: rookMastered },
+  ]
+  if (rookMastered) {
+    active.push({ name: 'Queen Sacrifice', current: 0, max: 10, icon: 'queen-sacrifice', active: true })
+  }
+  const mastered = [
+    { name: 'Skewer', current: 10, max: 10, icon: 'skewer', completed: true },
+    { name: 'Knight Fork', current: 10, max: 10, icon: 'knight-fork', completed: true },
+    { name: 'Fork', current: 10, max: 10, icon: 'fork', completed: true },
+  ]
+  const inactive = [
+    ...(!rookMastered ? [{ name: 'Queen Sacrifice', current: 0, max: 10, icon: 'queen-sacrifice' }] : []),
+    { name: 'Defend Piece', current: 0, max: 10, icon: 'defend-piece' },
+    { name: 'Check', current: 0, max: 10, icon: 'check' },
+  ]
+  return [...active, ...mastered, ...inactive]
+})
 
-// All Skills Mastered skills list - All skills completed except Queen Sacrifice at 9/10
+// All Skills Mastered: active first (Queen Sac at 9/10), then all mastered
 const allSkillsMasteredSkillsList = computed(() => [
+  // Active (becomes mastered after completing)
   { name: 'Queen Sacrifice', current: queenSacrificeCount.value, max: 10, icon: 'queen-sacrifice', completed: allSkillsMasteredCompleted.value },
+  // Mastered
   { name: 'Royal Fork', current: 10, max: 10, icon: 'royal-fork', completed: true },
   { name: 'Rook Sacrifice', current: 10, max: 10, icon: 'rook-sacrifice', completed: true },
   { name: 'Skewer', current: 10, max: 10, icon: 'skewer', completed: true },
@@ -2012,7 +2037,7 @@ button.cc-button-component.cc-button-secondary {
   left: 0;
   right: 0;
   z-index: 20;
-  max-height: 70%;
+  max-height: 90%;
 }
 
 .nav-bar {

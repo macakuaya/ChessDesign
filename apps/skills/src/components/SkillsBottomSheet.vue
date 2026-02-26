@@ -225,6 +225,10 @@ const skillIcons = {
   'checkmate': `${baseUrl}icons/skills/checkmate-dark.png`,
   'checkmate-dark': `${baseUrl}icons/skills/checkmate-dark.png`,
   'castle': `${baseUrl}icons/skills/castle.png`,
+  'skewer': `${baseUrl}icons/skills/capturing-dark-bishop.png`,
+  'knight-fork': `${baseUrl}icons/skills/skill-fork.svg`,
+  'fork': `${baseUrl}icons/skills/white_rook.png`,
+  'defend-piece': `${baseUrl}icons/skills/castle.png`,
 }
 
 function getProgressPercent(current, max) {
@@ -266,7 +270,7 @@ function onDragEnd() {
   isDragging.value = false
 }
 
-// Simple tap to toggle
+// Double-click to toggle expand
 function onTapToggle() {
   isExpanded.value = !isExpanded.value
 }
@@ -276,18 +280,11 @@ function onTapToggle() {
   <div 
     class="skills-bottom-sheet" 
     :class="{ open, expanded: isExpanded }"
-    @mouseup="onDragEnd"
-    @mouseleave="onDragEnd"
-    @touchend="onDragEnd"
   >
     <!-- Drag Handle (always visible) -->
     <div 
       class="drag-container" 
-      @click="onTapToggle"
-      @mousedown.prevent="onDragStart"
-      @mousemove="onDragMove"
-      @touchstart.passive="onDragStart"
-      @touchmove.passive="onDragMove"
+      @dblclick="onTapToggle"
     >
       <div class="drag-handle"></div>
     </div>
@@ -344,15 +341,15 @@ function onTapToggle() {
               v-for="skill in skills" 
               :key="skill.name"
               class="skill-item"
-              :class="{ locked: skill.locked, clickable: !skill.locked }"
+              :class="{ locked: skill.locked, clickable: !skill.locked, inactive: !skill.completed && !skill.locked && !skill.active && skill.current === 0 }"
               @click="onSkillClick(skill)"
             >
               <!-- Skill Icon -->
               <div class="skill-icon">
                 <img v-if="skill.icon && skillIcons[skill.icon]" :src="skillIcons[skill.icon]" :alt="skill.name" />
                 <div v-else class="skill-icon-placeholder">
-                  <svg viewBox="0 0 44 44" fill="none">
-                    <rect x="2" y="2" width="40" height="40" rx="2" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-dasharray="4 4" fill="none"/>
+                  <svg viewBox="0 0 56 56" fill="none">
+                    <rect x="2" y="2" width="52" height="52" rx="2" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-dasharray="4 4" fill="none"/>
                   </svg>
                 </div>
               </div>
@@ -362,15 +359,16 @@ function onTapToggle() {
                 <!-- Label + Counter (hidden for completed or locked skills) -->
                 <div class="skill-header">
                   <span class="skill-name">{{ skill.name }}</span>
-                  <span v-if="!skill.completed && !skill.locked" class="skill-counter">
+                  <span v-if="skill.completed" class="skill-mastered-label">Mastered</span>
+                  <span v-else-if="!skill.locked" class="skill-counter">
                     <span class="current">{{ skill.current }}</span>
                     <span class="separator">/</span>
                     <span class="max">{{ skill.max }}</span>
                   </span>
                 </div>
                 
-                <!-- Progress Bar (hidden for completed or locked skills) -->
-                <div v-if="!skill.completed && !skill.locked" class="progress-bar">
+                <!-- Progress Bar (hidden for locked skills) -->
+                <div v-if="!skill.locked" class="progress-bar" :class="{ 'progress-mastered': skill.completed }">
                   <div class="progress-bg"></div>
                   <div 
                     class="progress-fill" 
@@ -682,7 +680,7 @@ function onTapToggle() {
 /* Skills Container */
 .skills-container {
   padding: 0 12px;
-  max-height: 212px; /* Fits exactly 3 skill items: 3*44px + 2*24px gaps + 32px padding */
+  max-height: 248px; /* Fits exactly 3 skill items: 3*56px + 2*24px gaps + 32px padding */
   overflow: hidden;
   transition: max-height var(--motion-fast) var(--motion-ease-out-gentle);
 }
@@ -716,8 +714,8 @@ function onTapToggle() {
 }
 
 .skill-icon {
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   flex-shrink: 0;
   border-radius: 3px;
   overflow: hidden;
@@ -727,14 +725,14 @@ function onTapToggle() {
 }
 
 .skill-icon img {
-  width: 40px;
-  height: 40px;
+  width: 56px;
+  height: 56px;
   object-fit: contain;
 }
 
 .skill-icon-placeholder {
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
 }
 
 .skill-icon-placeholder svg {
@@ -755,6 +753,33 @@ function onTapToggle() {
   opacity: 0.5;
 }
 
+/* Inactive state (0 progress, not locked) */
+.skill-item.inactive .skill-name {
+  color: var(--color-text-subtle);
+}
+
+.skill-item.inactive .skill-counter {
+  color: var(--color-text-subtle);
+}
+
+.skill-item.inactive .skill-icon {
+  opacity: 0.3;
+}
+
+/* Mastered label */
+.skill-mastered-label {
+  font-family: 'Chess Sans', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 16px;
+  color: var(--color-text-subtle);
+}
+
+/* Mastered progress bar (dimmed 50%) */
+.progress-bar.progress-mastered {
+  opacity: 0.5;
+}
+
 .skill-info {
   flex: 1;
   display: flex;
@@ -764,7 +789,7 @@ function onTapToggle() {
 
 .skill-header {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
 }
 
