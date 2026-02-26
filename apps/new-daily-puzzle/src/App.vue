@@ -107,6 +107,7 @@ const moveState = ref('awaiting') // 'awaiting', 'wrong', 'hint', 'correct', 'co
 const streak = ref(0)
 const selectedSquare = ref(null)
 const lastMove = ref(null) // { from, to }
+const heartsEntrance = ref(false) // Triggers staggered heart + timer entrance animation
 
 // Hint state
 const hintHighlightSquare = ref(null)  // square to highlight with blue overlay (piece to move)
@@ -585,6 +586,7 @@ const resetPuzzle = () => {
   streak.value = 0
   displayedProgress.value = 0
   displayedStreak.value = 0
+  heartsEntrance.value = false
   loadPuzzle()
 }
 
@@ -1120,6 +1122,7 @@ const startPuzzle = () => {
   moveState.value = 'awaiting'
   saveCheckpoint()
   startTimer()
+  heartsEntrance.value = true
 }
 
 // ============================================
@@ -1331,10 +1334,15 @@ onUnmounted(() => {
                 :name="i <= lives ? 'emote-heart-fill' : 'emote-heart-broken'" 
                 :size="32" 
                 class="heart-icon"
-                :class="{ 'heart-lost': i > lives }"
+                :class="{ 'heart-lost': i > lives, 'heart-enter': heartsEntrance }"
+                :style="heartsEntrance ? { animationDelay: ((i - 1) * 120) + 'ms' } : {}"
               />
             </div>
-            <div class="timer">
+            <div 
+              class="timer" 
+              :class="{ 'timer-enter': heartsEntrance }"
+              :style="heartsEntrance ? { animationDelay: (puzzle.results.totalLives * 120) + 'ms' } : {}"
+            >
               <CcIcon name="time-clock-hollow-hand-left" :size="24" />
               <span class="timer-text">{{ timerDisplay }}</span>
             </div>
@@ -1747,9 +1755,32 @@ body {
   color: var(--color-green-300, #81B64C);
 }
 
+.heart-icon.heart-enter {
+  opacity: 0;
+  transform: scale(0.8);
+  animation: heart-pop-in 200ms cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
 .heart-icon.heart-lost {
   color: var(--color-text-default, rgba(255, 255, 255, 0.72));
   opacity: 0.4;
+}
+
+.timer-enter {
+  opacity: 0;
+  transform: scale(0.8);
+  animation: heart-pop-in 200ms cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+@keyframes heart-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .timer {
