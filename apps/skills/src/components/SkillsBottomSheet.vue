@@ -291,9 +291,8 @@ function onTapToggle() {
       <div class="drag-handle"></div>
     </div>
     
-    <!-- Close Button (shown on detail view, positioned at sheet top-right) -->
+    <!-- Close Button -->
     <CcIconButton 
-      v-if="showingDetail"
       :icon="{ name: 'mark-cross', variant: 'glyph' }"
       size="large"
       :icon-size="16"
