@@ -386,6 +386,9 @@ function onCoachBubbleLeave() {
   if (coachBubblePendingShow && coachMessage.value) {
     coachBubblePendingShow = false
     showCoachBubble.value = true
+    if (!heartsEntrance.value && puzzlePhase.value === 'playing') {
+      setTimeout(() => { heartsEntrance.value = true; startTimer() }, 300)
+    }
   }
 }
 
@@ -1121,8 +1124,6 @@ const startPuzzle = () => {
   puzzlePhase.value = 'playing'
   moveState.value = 'awaiting'
   saveCheckpoint()
-  startTimer()
-  heartsEntrance.value = true
 }
 
 // ============================================
@@ -1325,8 +1326,8 @@ onUnmounted(() => {
             />
           </div>
 
-          <!-- Hearts + Timer (hidden during intro) -->
-          <div v-if="puzzlePhase !== 'intro'" class="hearts-timer-row">
+          <!-- Hearts + Timer (hidden until entrance animation triggers) -->
+          <div v-if="heartsEntrance || puzzlePhase === 'solved'" class="hearts-timer-row">
             <div class="hearts">
               <CcIcon 
                 v-for="i in puzzle.results.totalLives" 
@@ -1757,7 +1758,7 @@ body {
 
 .heart-icon.heart-enter {
   opacity: 0;
-  transform: scale(0.8);
+  transform: scale(0.75);
   animation: heart-pop-in 200ms cubic-bezier(0, 0, 0.2, 1) forwards;
 }
 
@@ -1768,14 +1769,14 @@ body {
 
 .timer-enter {
   opacity: 0;
-  transform: scale(0.8);
+  transform: scale(0.75);
   animation: heart-pop-in 200ms cubic-bezier(0, 0, 0.2, 1) forwards;
 }
 
 @keyframes heart-pop-in {
   from {
     opacity: 0;
-    transform: scale(0.8);
+    transform: scale(0.75);
   }
   to {
     opacity: 1;
