@@ -149,7 +149,9 @@ function startTransitionToList() {
 const SHEET_CLOSE_DURATION = 300 // Match CSS transition duration
 
 watch(() => props.open, (isOpen) => {
-  if (!isOpen) {
+  if (isOpen) {
+    activeTab.value = props.initialTab
+  } else {
     // Delay reset until sheet close animation completes
     setTimeout(() => {
       selectedSkill.value = null

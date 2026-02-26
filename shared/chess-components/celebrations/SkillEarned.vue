@@ -75,8 +75,8 @@ watch(() => props.visible, (isVisible) => {
     <div class="skill-icon">
       <img v-if="iconSrc" :src="iconSrc" :alt="skillName" />
       <div v-else class="skill-icon-placeholder">
-        <svg viewBox="0 0 40 40" fill="none">
-          <rect x="2" y="2" width="36" height="36" rx="2" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-dasharray="4 4" fill="none"/>
+        <svg viewBox="0 0 56 56" fill="none">
+          <rect x="2" y="2" width="52" height="52" rx="2" stroke="rgba(255,255,255,0.3)" stroke-width="2" stroke-dasharray="4 4" fill="none"/>
         </svg>
       </div>
     </div>
@@ -139,8 +139,8 @@ watch(() => props.visible, (isVisible) => {
 }
 
 .skill-icon {
-  width: 40px;
-  height: 40px;
+  width: 56px;
+  height: 56px;
   flex-shrink: 0;
   overflow: hidden;
   display: flex;
@@ -149,14 +149,14 @@ watch(() => props.visible, (isVisible) => {
 }
 
 .skill-icon img {
-  width: 40px;
-  height: 40px;
+  width: 56px;
+  height: 56px;
   object-fit: contain;
 }
 
 .skill-icon-placeholder {
-  width: 40px;
-  height: 40px;
+  width: 56px;
+  height: 56px;
 }
 
 .skill-icon-placeholder svg {
