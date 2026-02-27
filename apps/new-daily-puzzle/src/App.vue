@@ -108,6 +108,8 @@ const streak = ref(0)
 const selectedSquare = ref(null)
 const lastMove = ref(null) // { from, to }
 const heartsEntrance = ref(false) // Triggers staggered heart + timer entrance animation
+const heartbeatActive = ref(false) // Pulses last green heart when lives === 1
+let heartbeatDelayTimer = null
 const showVideoCard = ref(false) // Delayed entrance for video card after solved bubble
 watch(() => puzzlePhase.value, (phase) => {
   if (phase === 'solved') {
@@ -208,6 +210,25 @@ const replayForward = () => {
   }
 }
 const lives = ref(puzzle.results.totalLives) // Hearts / lives remaining
+
+// Heartbeat: activate with brief delay when lives drops to 1, stop on next move
+watch(lives, (val) => {
+  if (heartbeatDelayTimer) { clearTimeout(heartbeatDelayTimer); heartbeatDelayTimer = null }
+  if (val === 1) {
+    heartbeatDelayTimer = setTimeout(() => { heartbeatActive.value = true }, 600)
+  } else {
+    heartbeatActive.value = false
+  }
+})
+watch(moveState, (val) => {
+  if (val !== 'awaiting' && val !== 'soft-hint' && val !== 'soft-solution') {
+    heartbeatActive.value = false
+    if (heartbeatDelayTimer) { clearTimeout(heartbeatDelayTimer); heartbeatDelayTimer = null }
+  } else if (lives.value === 1 && !heartbeatActive.value && !heartbeatDelayTimer) {
+    heartbeatDelayTimer = setTimeout(() => { heartbeatActive.value = true }, 600)
+  }
+})
+
 const timerSeconds = ref(0) // Puzzle timer in seconds
 let timerInterval = null
 
@@ -662,6 +683,8 @@ const resetPuzzle = () => {
   displayedProgress.value = 0
   displayedStreak.value = 0
   heartsEntrance.value = false
+  heartbeatActive.value = false
+  if (heartbeatDelayTimer) { clearTimeout(heartbeatDelayTimer); heartbeatDelayTimer = null }
   loadPuzzle()
 }
 
@@ -1028,13 +1051,14 @@ const tryMove = (from, to) => {
     }
     
     // Reset streak, lose a life, and set wrong state
+    const wasInSoftHint = moveState.value === 'soft-hint' || moveState.value === 'soft-solution'
     streak.value = 0
     loseLife()
     failCountForCurrentMove.value++
-    moveState.value = 'wrong'
-    
-    // Soft fail: auto-restore after 2500ms with slide-back (only if lives remain)
-    if (lives.value > 0) {
+
+    if (wasInSoftHint) {
+      // Arrow was already showing -- stay in soft-hint, just lose the heart and slide back
+      moveState.value = 'soft-hint'
       const wrongTo = to
       const originalFrom = from
       if (softFailTimeout) clearTimeout(softFailTimeout)
@@ -1042,38 +1066,69 @@ const tryMove = (from, to) => {
         softFailTimeout = null
         const pieceAtWrong = getPieceOnSquare(wrongTo)
         if (!pieceAtWrong) return
-        
-        // Start slide-back animation
         const fromPos = squareToPixelPos(wrongTo)
         const toPos = squareToPixelPos(originalFrom)
         slidingPiece.value = {
           type: pieceAtWrong.type,
-          startX: fromPos.x,
-          startY: fromPos.y,
-          endX: toPos.x,
-          endY: toPos.y,
+          startX: fromPos.x, startY: fromPos.y,
+          endX: toPos.x, endY: toPos.y,
           hideSquare: wrongTo,
         }
-        
-        // After slide animation completes, restore board and show hints
         setTimeout(() => {
           slidingPiece.value = null
           softRestoreBoard()
-          
           const expected = currentExpectedMove.value
-          if (expected) {
-            hintHighlightSquare.value = expected.from
-          }
-          
-          if (failCountForCurrentMove.value >= 2) {
-            showMoveArrow.value = true
-            softMoveUsed.value = true
-          } else {
-            softMoveUsed.value = false
-          }
+          if (expected) hintHighlightSquare.value = expected.from
+          showMoveArrow.value = true
+          softMoveUsed.value = true
           moveState.value = 'soft-hint'
         }, 300)
       }, 2500)
+    } else {
+      moveState.value = 'wrong'
+    
+      // Soft fail: auto-restore after 2500ms with slide-back (only if lives remain)
+      if (lives.value > 0) {
+        const wrongTo = to
+        const originalFrom = from
+        if (softFailTimeout) clearTimeout(softFailTimeout)
+        softFailTimeout = setTimeout(() => {
+          softFailTimeout = null
+          const pieceAtWrong = getPieceOnSquare(wrongTo)
+          if (!pieceAtWrong) return
+          
+          // Start slide-back animation
+          const fromPos = squareToPixelPos(wrongTo)
+          const toPos = squareToPixelPos(originalFrom)
+          slidingPiece.value = {
+            type: pieceAtWrong.type,
+            startX: fromPos.x,
+            startY: fromPos.y,
+            endX: toPos.x,
+            endY: toPos.y,
+            hideSquare: wrongTo,
+          }
+          
+          // After slide animation completes, restore board and show hints
+          setTimeout(() => {
+            slidingPiece.value = null
+            softRestoreBoard()
+            
+            const expected = currentExpectedMove.value
+            if (expected) {
+              hintHighlightSquare.value = expected.from
+            }
+            
+            if (failCountForCurrentMove.value >= 2) {
+              showMoveArrow.value = true
+              softMoveUsed.value = true
+            } else {
+              softMoveUsed.value = false
+            }
+            moveState.value = 'soft-hint'
+          }, 300)
+        }, 2500)
+      }
     }
     
     return false
@@ -1534,7 +1589,7 @@ onUnmounted(() => {
                 :name="i <= lives ? 'emote-heart-fill' : 'emote-heart-broken'" 
                 :size="32" 
                 class="heart-icon"
-                :class="{ 'heart-lost': i > lives, 'heart-enter': heartsEntrance }"
+                :class="{ 'heart-lost': i > lives, 'heart-enter': heartsEntrance, 'heart-last-life': heartbeatActive && lives === 1 && i === 1 }"
                 :style="heartsEntrance ? { animationDelay: ((i - 1) * 120) + 'ms' } : {}"
               />
             </div>
@@ -2005,6 +2060,26 @@ body {
 .heart-icon.heart-lost {
   color: var(--color-text-default, rgba(255, 255, 255, 0.72));
   opacity: 0.4;
+}
+
+.heart-icon.heart-last-life {
+  opacity: 1;
+  animation: heartbeat 1200ms var(--motion-ease-in-out-gentle) infinite;
+}
+
+@keyframes heartbeat {
+  0%   { transform: scale(1); }
+  14%  { transform: scale(1.08); }
+  28%  { transform: scale(1); }
+  42%  { transform: scale(1.15); }
+  56%  { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heart-icon.heart-last-life {
+    animation: none;
+  }
 }
 
 .timer-enter {
