@@ -160,6 +160,9 @@ const replayGoTo = (ply) => {
   checkmateEffectSquares.value = {}
   checkmateEffectIcons.value = {}
   checkmateEffectLabels.value = {}
+  classificationSquare.value = null
+  classificationType.value = null
+  brilliantHighlight.value = null
 }
 
 const replayBack = () => {
