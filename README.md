@@ -1,53 +1,51 @@
-# ♟️ Chess Prototypes
+# Chess Prototypes
 
 A monorepo for Chess.com UI prototypes with shared components.
 
-## 🌐 Live Demos
+## Live Demos
 
 - **Landing**: https://macakuaya.github.io/ChessPrototypes/
+- **Daily Puzzle**: https://macakuaya.github.io/ChessPrototypes/new-daily-puzzle/
+- **Notifications**: https://macakuaya.github.io/ChessPrototypes/new-notifications/
 - **Skills**: https://macakuaya.github.io/ChessPrototypes/skills/
 - **Juicy Learn**: https://macakuaya.github.io/ChessPrototypes/juicy-learn/
 
-## 📁 Structure
+## Structure
 
 ```
 ChessPrototypes/
 ├── shared/
-│   └── chess-components/     # Shared components (sounds, animations, celebrations)
+│   └── chess-components/        # Shared components (sounds, animations, celebrations)
 ├── apps/
-│   ├── skills/               # Skills prototype
-│   └── juicy-learn/          # Juicy Learn prototype
-├── landing/                  # Landing page
-└── .github/workflows/        # Auto-deploy to GitHub Pages
+│   ├── new-daily-puzzle/        # Daily Puzzle prototype
+│   ├── new-notifications/       # Notifications prototype
+│   ├── skills/                  # Skills prototype
+│   └── juicy-learn/             # Juicy Learn prototype
+├── landing/                     # Landing page
+└── .github/workflows/           # Auto-deploy to GitHub Pages
 ```
 
-## 🚀 Development
+## Development
 
 ### Running a prototype locally
 
 ```bash
-cd apps/skills
+cd apps/new-daily-puzzle
 npm install
 npm run dev
 ```
 
-Or for Juicy Learn:
-
-```bash
-cd apps/juicy-learn
-npm install
-npm run dev
-```
+Same pattern for any app -- `cd` into the app folder, install, and run.
 
 ### Adding a new prototype
 
 1. Create a new folder in `apps/`
-2. Copy the structure from an existing app (e.g., `juicy-learn`)
+2. Copy the structure from an existing app (e.g., `new-daily-puzzle`)
 3. Update `vite.config.js` with the correct `base` path
 4. Add build steps to `.github/workflows/deploy.yml`
 5. Add link to `landing/index.html`
 
-## 🔧 Shared Components
+## Shared Components
 
 Import shared components in any app using the `@chess/components` alias:
 
@@ -56,6 +54,6 @@ import { BoardCelebration, SkillEarned } from '@chess/components'
 import { playSound, useSound } from '@chess/components/sounds'
 ```
 
-## 📦 Deployment
+## Deployment
 
 Automatic deployment to GitHub Pages on push to `main` branch.
