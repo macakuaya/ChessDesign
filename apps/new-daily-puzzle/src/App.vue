@@ -276,7 +276,7 @@ const loseLife = () => {
     breakingShrinkTimer = null
     lives.value--
     breakingPhase.value = 'snapping'
-  }, 150)
+  }, 195)
 
   if (breakingHeartTimer) clearTimeout(breakingHeartTimer)
   breakingHeartTimer = setTimeout(() => {
@@ -1715,6 +1715,9 @@ onUnmounted(() => {
                 v-else
                 variant="secondary" size="large"
                 :icon="{ name: 'circle-fill-question' }"
+                :disabled="softMoveUsed"
+                class="soft-move-btn"
+                :class="{ 'soft-move-btn-disabled': softMoveUsed }"
                 @click="handleSoftMove"
               >Move</CcButton>
             </template>
@@ -2109,7 +2112,7 @@ body {
 }
 
 .heart-icon.heart-breaking {
-  animation: heart-break var(--motion-steady, 300ms) var(--motion-ease-in-out-strong, cubic-bezier(0.5, 0, 0.6, 1)) both;
+  animation: heart-break var(--motion-steady, 300ms) linear both;
 }
 
 @keyframes heart-break {
@@ -2117,11 +2120,13 @@ body {
     transform: scale(1);
     color: var(--color-green-300, #81B64C);
     opacity: 1;
+    animation-timing-function: var(--motion-ease-in-out-strong, cubic-bezier(0.5, 0, 0.6, 1));
   }
-  50% {
+  65% {
     transform: scale(0.75);
     color: var(--color-text-default, rgba(255, 255, 255, 0.72));
     opacity: 0.4;
+    animation-timing-function: var(--motion-ease-out-abrupt, cubic-bezier(0, 0, 0, 1));
   }
   100% {
     transform: scale(1);
