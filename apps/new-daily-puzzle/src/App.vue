@@ -2086,6 +2086,12 @@ body {
   gap: 0;
 }
 
+@media (hover: hover) {
+  .date-picker :deep(.cc-dropdown-button-ghost:not([disabled]):hover) {
+    background: var(--color-bg-subtler);
+  }
+}
+
 /* Hearts + Timer */
 .hearts-timer-row {
   display: flex;
