@@ -388,23 +388,23 @@ const totalDigits = computed(() => digitDiff(props.totalSolved - 1, props.totalS
   opacity: 0;
 }
 
-/* Content: scale + fade */
+/* Content: slide-up enter, scale-down leave */
 .dialogue-content-enter-active {
   transition:
-    transform 350ms cubic-bezier(0, 0, 0.2, 1),
-    opacity 200ms ease;
+    transform var(--motion-duration-normal, 300ms) var(--motion-ease-out-gentle, cubic-bezier(0, 0, 0.2, 1)),
+    opacity var(--motion-duration-normal, 300ms) var(--motion-ease-out-gentle, cubic-bezier(0, 0, 0.2, 1));
 }
 .dialogue-content-leave-active {
   transition:
-    transform 200ms ease,
-    opacity 150ms ease;
+    transform 100ms var(--motion-ease-in-gentle, cubic-bezier(0.4, 0, 1, 1)),
+    opacity 100ms var(--motion-ease-in-gentle, cubic-bezier(0.4, 0, 1, 1));
 }
 .dialogue-content-enter-from {
-  transform: scale(0.92) translateY(12px);
+  transform: translateY(100px);
   opacity: 0;
 }
 .dialogue-content-leave-to {
-  transform: scale(0.96);
+  transform: scale(0.9);
   opacity: 0;
 }
 </style>
