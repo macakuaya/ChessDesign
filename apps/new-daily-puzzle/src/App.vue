@@ -196,7 +196,10 @@ const SUCCESS_SUBTITLES = {
   'Next time!': 'Tough one! The more you solve, the sharper you get.',
 }
 
-const successSubtitle = computed(() => SUCCESS_SUBTITLES[successTitle.value] || '')
+const successSubtitle = computed(() => {
+  const base = SUCCESS_SUBTITLES[successTitle.value] || ''
+  return `${base}\nSolved in ${timerDisplay.value}`
+})
 
 // Hint state
 const hintHighlightSquare = ref(null)  // square to highlight with blue overlay (piece to move)

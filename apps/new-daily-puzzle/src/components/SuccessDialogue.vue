@@ -29,13 +29,81 @@ const hearts = computed(() => {
 const statsAnimating = ref(false)
 let statsTimer = null
 
+// Heart animation state machine
+const heartPhase = ref('idle') // 'idle' | 'popping' | 'breaking' | 'done'
+const brokenSet = ref(new Set()) // Which heart indices have finished breaking (0-based)
+let heartTimers = []
+
+const clearHeartTimers = () => {
+  heartTimers.forEach(t => clearTimeout(t))
+  heartTimers = []
+}
+
+const heartIconName = (index, alive) => {
+  if (heartPhase.value === 'idle') return 'emote-heart-fill'
+  if (heartPhase.value === 'popping') return 'emote-heart-fill'
+  if (brokenSet.value.has(index)) return 'emote-heart-broken'
+  if (!alive && heartPhase.value === 'done') return 'emote-heart-broken'
+  return 'emote-heart-fill'
+}
+
+const heartClass = (index, alive) => {
+  if (heartPhase.value === 'idle') return 'heart-hidden'
+  if (heartPhase.value === 'popping') return 'heart-popping heart-green'
+  if (heartPhase.value === 'breaking' || heartPhase.value === 'done') {
+    if (brokenSet.value.has(index)) return 'heart-broken-final'
+    if (!alive && heartPhase.value !== 'done') return 'heart-breaking-anim heart-green'
+    if (alive) return 'heart-green'
+    return 'heart-broken-final'
+  }
+  return ''
+}
+
+const POP_STAGGER = 120
+const BREAK_STAGGER = 200
+
 watch(() => props.open, (isOpen) => {
   if (statsTimer) { clearTimeout(statsTimer); statsTimer = null }
+  clearHeartTimers()
+
   if (isOpen) {
     statsAnimating.value = false
+    heartPhase.value = 'idle'
+    brokenSet.value = new Set()
+
     statsTimer = setTimeout(() => { statsAnimating.value = true }, 400)
+
+    // Phase 1: pop-in after dialogue entrance (300ms)
+    heartTimers.push(setTimeout(() => {
+      heartPhase.value = 'popping'
+
+      // Phase 2: break after all hearts have popped in
+      const popDuration = props.heartsTotal * POP_STAGGER + 200
+      heartTimers.push(setTimeout(() => {
+        heartPhase.value = 'breaking'
+
+        const lost = props.heartsTotal - props.heartsRemaining
+        if (lost === 0) {
+          heartPhase.value = 'done'
+          return
+        }
+
+        // Break from rightmost lost heart inward
+        for (let k = 0; k < lost; k++) {
+          const heartIndex = props.heartsTotal - 1 - k
+          heartTimers.push(setTimeout(() => {
+            brokenSet.value = new Set([...brokenSet.value, heartIndex])
+            if (k === lost - 1) {
+              heartTimers.push(setTimeout(() => { heartPhase.value = 'done' }, 300))
+            }
+          }, k * BREAK_STAGGER))
+        }
+      }, popDuration))
+    }, 300))
   } else {
     statsAnimating.value = false
+    heartPhase.value = 'idle'
+    brokenSet.value = new Set()
   }
 })
 
@@ -85,10 +153,11 @@ const totalDigits = computed(() => digitDiff(props.totalSolved - 1, props.totalS
               <CcIcon
                 v-for="(alive, i) in hearts"
                 :key="i"
-                :name="alive ? 'emote-heart-fill' : 'emote-heart-broken'"
+                :name="heartIconName(i, alive)"
                 :size="40"
                 class="heart"
-                :class="alive ? 'heart-alive' : 'heart-lost'"
+                :class="heartClass(i, alive)"
+                :style="heartPhase === 'popping' ? { animationDelay: (i * POP_STAGGER) + 'ms' } : {}"
               />
             </div>
 
@@ -121,16 +190,8 @@ const totalDigits = computed(() => digitDiff(props.totalSolved - 1, props.totalS
                 <span class="stat-label">Streak</span>
               </div>
               <div class="stat">
-                <span class="stat-value stat-digits">
-                  <template v-for="(dig, i) in maxStreakDigits" :key="'m'+i">
-                    <span v-if="!dig.changed" class="digit-static">{{ dig.d }}</span>
-                    <span v-else class="digit-slot" :class="{ animating: statsAnimating }" :style="{ transitionDelay: '100ms' }">
-                      <span class="slot-prev">{{ dig.prev }}</span>
-                      <span class="slot-next">{{ dig.next }}</span>
-                    </span>
-                  </template>
-                </span>
-                <span class="stat-label">Max Streak</span>
+                <span class="stat-value">89<span class="percent-sign">%</span></span>
+                <span class="stat-label">% Solved</span>
               </div>
               <div class="stat">
                 <span class="stat-value stat-digits">
@@ -146,15 +207,6 @@ const totalDigits = computed(() => digitDiff(props.totalSolved - 1, props.totalS
               </div>
             </div>
 
-            <CcButton
-              variant="secondary"
-              size="large"
-              :full-width="true"
-              :icon="{ name: 'puzzle-piece', variant: 'color' }"
-              @click="emit('more-puzzles')"
-            >
-              Solve more Puzzles
-            </CcButton>
           </div>
         </div>
       </Transition>
@@ -263,13 +315,59 @@ const totalDigits = computed(() => digitDiff(props.totalSolved - 1, props.totalS
   gap: 8px;
 }
 
-.heart-alive {
+.heart-hidden {
+  opacity: 0;
+  transform: scale(0.75);
+}
+
+.heart-green {
   color: var(--color-green-300, #81B64C);
 }
 
-.heart-lost {
+.heart-popping {
+  opacity: 0;
+  transform: scale(0.75);
+  animation: heart-pop-in 200ms cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+.heart-breaking-anim {
+  animation: heart-break 300ms linear both;
+}
+
+.heart-broken-final {
   color: var(--color-text-default, rgba(255, 255, 255, 0.72));
   opacity: 0.4;
+}
+
+@keyframes heart-pop-in {
+  0%   { opacity: 0; transform: scale(0.75); }
+  70%  { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes heart-break {
+  0% {
+    transform: scale(1);
+    color: var(--color-green-300, #81B64C);
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.6, 1);
+  }
+  65% {
+    transform: scale(0.75);
+    color: var(--color-text-default, rgba(255, 255, 255, 0.72));
+    opacity: 0.4;
+    animation-timing-function: cubic-bezier(0, 0, 0, 1);
+  }
+  100% {
+    transform: scale(1);
+    color: var(--color-text-default, rgba(255, 255, 255, 0.72));
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heart-popping { animation: none; opacity: 1; transform: none; }
+  .heart-breaking-anim { animation: none; }
 }
 
 /* Share CTA (full-width wrapper) */
@@ -326,6 +424,12 @@ const totalDigits = computed(() => digitDiff(props.totalSolved - 1, props.totalS
   text-align: center;
   min-width: 100%;
   font-feature-settings: 'liga' 0;
+}
+
+.percent-sign {
+  font-size: 17px;
+  line-height: 20px;
+  font-weight: 800;
 }
 
 .stat-digits {
