@@ -387,6 +387,7 @@ const coachHeaderText = computed(() => {
   if (puzzlePhase.value === 'solved') {
     return 'Solved!'
   }
+  if (moveState.value === 'hint' && softMoveUsed.value) return 'Move'
   if (moveState.value === 'hint') return 'Hint'
   if (moveState.value === 'soft-hint' && softMoveUsed.value) return 'Solution'
   if (moveState.value === 'soft-hint') return 'Hint'
