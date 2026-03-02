@@ -34,6 +34,8 @@ const displayHeaderText = computed(() => {
       return props.moveNotation ? `${props.moveNotation} is correct` : 'Correct!'
     case 'incorrect':
       return props.moveNotation ? `${props.moveNotation} is incorrect` : 'Incorrect'
+    case 'hint':
+      return 'Hint'
     default:
       return ''
   }
@@ -41,7 +43,7 @@ const displayHeaderText = computed(() => {
 
 // Determine if we should show an icon/indicator based on state
 const showStateIndicator = computed(() => {
-  return ['white-to-move', 'black-to-move', 'correct', 'incorrect'].includes(props.state)
+  return ['white-to-move', 'black-to-move', 'correct', 'incorrect', 'hint'].includes(props.state)
 })
 
 const tipSrc = `${base}icons/misc/bubble-tip.svg`
@@ -179,6 +181,9 @@ function onAfterLeave() {
                 
                 <!-- Incorrect: miss classification icon -->
                 <CcIcon v-if="state === 'incorrect'" name="classification-miss" variant="color" :size="24" class="state-icon" />
+                
+                <!-- Hint: bulb glyph -->
+                <CcIcon v-if="state === 'hint'" name="device-bulb-glow" :size="24" class="state-icon hint-icon" />
                 
                 <span class="classification-text">{{ displayHeaderText }}</span>
               </div>
@@ -337,9 +342,13 @@ function onAfterLeave() {
   background: black;
 }
 
-/* State icons (Correct/Incorrect) */
+/* State icons (Correct/Incorrect/Hint) */
 .state-icon {
   flex-shrink: 0;
+}
+
+.hint-icon {
+  color: var(--color-gray-700, #4B4847);
 }
 
 .correct-icon {

@@ -76,9 +76,9 @@ const puzzle = {
   initialFEN: '6kb/7p/p1n3bP/1p4P1/4Bp2/BPq5/P1P2P2/4R3 w - - 0 1',
   hint: 'Look at the bishop on e4',
   moves: [
-    { from: 'e4', to: 'd5', piece: 'B', notation: 'Bd5' },
+    { from: 'e4', to: 'd5', piece: 'B', notation: 'Bd5', moveHint: 'Attack along the diagonal with the bishop' },
     { from: 'g6', to: 'f7', piece: 'b', notation: 'Bf7', isComputer: true },
-    { from: 'e1', to: 'e8', piece: 'R', notation: 'Re8', isCheckmate: true, kingSquare: 'g8' },
+    { from: 'e1', to: 'e8', piece: 'R', notation: 'Re8', isCheckmate: true, kingSquare: 'g8', moveHint: 'Deliver checkmate with the rook' },
   ],
   results: {
     title: 'Awesome!',
@@ -343,6 +343,7 @@ const coachHeaderText = computed(() => {
   if (puzzlePhase.value === 'solved') {
     return 'Solved!'
   }
+  if (moveState.value === 'hint') return 'Hint'
   if (moveState.value === 'soft-hint' && softMoveUsed.value) return 'Solution'
   if (moveState.value === 'soft-hint') return 'Hint'
   if (moveState.value === 'soft-solution') return 'Solution'
@@ -366,7 +367,10 @@ const coachMessage = computed(() => {
       if (lives.value === 0) return "Out of hearts! See the solution or keep trying on your own."
       return "There's a better move, try again."
     case 'soft-hint': {
-      if (softMoveUsed.value) return 'This is the correct move'
+      if (softMoveUsed.value) {
+        const expected = currentExpectedMove.value
+        return expected?.moveHint || 'This is the correct move'
+      }
       const expected = currentExpectedMove.value
       if (expected) {
         const pieceNames = { 'K': 'king', 'Q': 'queen', 'R': 'rook', 'B': 'bishop', 'N': 'knight', 'P': 'pawn' }
@@ -375,10 +379,22 @@ const coachMessage = computed(() => {
       }
       return puzzle.hint
     }
-    case 'soft-solution':
-      return 'This is the correct move'
-    case 'hint':
+    case 'soft-solution': {
+      const expected = currentExpectedMove.value
+      return expected?.moveHint || 'This is the correct move'
+    }
+    case 'hint': {
+      const expected = currentExpectedMove.value
+      if (softMoveUsed.value) {
+        return expected?.moveHint || 'This is the correct move'
+      }
+      if (expected) {
+        const pieceNames = { 'K': 'king', 'Q': 'queen', 'R': 'rook', 'B': 'bishop', 'N': 'knight', 'P': 'pawn' }
+        const name = pieceNames[expected.piece?.toUpperCase()] || 'piece'
+        return `Look at the ${name} on ${expected.from}`
+      }
       return puzzle.hint
+    }
     case 'correct': {
       const move = currentExpectedMove.value
       if (move?.isCheckmate) {
@@ -402,8 +418,9 @@ const coachState = computed(() => {
   switch (moveState.value) {
     case 'wrong': return 'incorrect'
     case 'correct': return 'correct'
-    case 'soft-hint': return 'white-to-move'
-    case 'soft-solution': return 'white-to-move'
+    case 'hint': return 'hint'
+    case 'soft-hint': return 'hint'
+    case 'soft-solution': return 'hint'
     case 'computer-moving': return lastCorrectMessage.value ? 'correct' : 'black-to-move'
     case 'awaiting': return lastCorrectMessage.value ? 'correct' : 'white-to-move'
     default: return 'white-to-move'
@@ -993,12 +1010,14 @@ const scheduleNextMove = (afterDelay = 3800) => {
           currentMoveIndex.value = nextIndex + 1
           moveState.value = 'awaiting'
           failCountForCurrentMove.value = 0
+          softMoveUsed.value = false
           saveCheckpoint()
         }, 600)
       }, 800) // Delay before computer plays
     } else {
       moveState.value = 'awaiting'
       failCountForCurrentMove.value = 0
+      softMoveUsed.value = false
       saveCheckpoint()
     }
   }, afterDelay)
