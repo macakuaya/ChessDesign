@@ -233,6 +233,50 @@ watch(moveState, (val) => {
   }
 })
 
+// Heartbeat sound — synthesized lub-dub via Web Audio API, synced to 2000ms CSS animation
+let heartbeatAudioCtx = null
+let heartbeatInterval = null
+
+const playLubDub = () => {
+  if (!heartbeatAudioCtx) return
+  const ctx = heartbeatAudioCtx
+  const now = ctx.currentTime
+
+  const thud = (time, freq, gain, duration) => {
+    const osc = ctx.createOscillator()
+    const env = ctx.createGain()
+    osc.type = 'sine'
+    osc.frequency.value = freq
+    env.gain.setValueAtTime(gain, time)
+    env.gain.exponentialRampToValueAtTime(0.001, time + duration)
+    osc.connect(env)
+    env.connect(ctx.destination)
+    osc.start(time)
+    osc.stop(time + duration)
+  }
+
+  thud(now, 50, 0.12, 0.10)        // lub: softer, 50Hz
+  thud(now + 0.30, 55, 0.18, 0.12) // dub: stronger, 55Hz — 300ms later
+}
+
+const startHeartbeatSound = () => {
+  try {
+    heartbeatAudioCtx = new (window.AudioContext || window.webkitAudioContext)()
+    playLubDub()
+    heartbeatInterval = setInterval(playLubDub, 2000)
+  } catch (e) { /* Web Audio not available */ }
+}
+
+const stopHeartbeatSound = () => {
+  if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null }
+  if (heartbeatAudioCtx) { heartbeatAudioCtx.close().catch(() => {}); heartbeatAudioCtx = null }
+}
+
+watch(heartbeatActive, (active) => {
+  if (active) startHeartbeatSound()
+  else stopHeartbeatSound()
+})
+
 const timerSeconds = ref(0) // Puzzle timer in seconds
 let timerInterval = null
 
@@ -734,6 +778,7 @@ const resetPuzzle = () => {
   displayedStreak.value = 0
   heartsEntrance.value = false
   heartbeatActive.value = false
+  stopHeartbeatSound()
   if (heartbeatDelayTimer) { clearTimeout(heartbeatDelayTimer); heartbeatDelayTimer = null }
   breakingHeartIndex.value = null
   breakingPhase.value = null
@@ -1449,6 +1494,7 @@ onUnmounted(() => {
   if (softFailTimeout) { clearTimeout(softFailTimeout); softFailTimeout = null }
   if (breakingHeartTimer) { clearTimeout(breakingHeartTimer); breakingHeartTimer = null }
   if (breakingShrinkTimer) { clearTimeout(breakingShrinkTimer); breakingShrinkTimer = null }
+  stopHeartbeatSound()
 })
 
 
