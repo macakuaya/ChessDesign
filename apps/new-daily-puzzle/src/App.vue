@@ -487,7 +487,7 @@ const coachMessage = computed(() => {
       return lastCorrectMessage.value || '' // Keep showing correct message until next move
     case 'wrong':
       lastCorrectMessage.value = ''
-      if (lives.value === 0) return "Out of hearts! See the solution or keep trying on your own."
+      if (lives.value === 0 || (lives.value === 1 && breakingHeartIndex.value !== null)) return "Out of hearts! See the solution or keep trying on your own."
       return "There's a better move, try again."
     case 'soft-hint': {
       if (softMoveUsed.value) {
@@ -855,6 +855,7 @@ const loadPuzzle = () => {
   classificationType.value = null
   failCountForCurrentMove.value = 0
   softMoveUsed.value = false
+  preOutOfHeartsState.value = null
   showVideoCard.value = false
   showSuccessDialogue.value = false
 }
@@ -1246,21 +1247,27 @@ const tryMove = (from, to) => {
     }
     
     // Reset streak, lose a life, and set wrong state
-    const wasInSoftHint = moveState.value === 'soft-hint' || moveState.value === 'soft-solution'
+    const prevHintState = (moveState.value === 'soft-hint' || moveState.value === 'soft-solution') ? moveState.value : null
     streak.value = 0
     loseLife()
     failCountForCurrentMove.value++
 
-    if (wasInSoftHint) {
-      // Arrow was already showing -- stay in soft-hint, just lose the heart and slide back
-      moveState.value = 'soft-hint'
+    moveState.value = 'wrong'
+
+    // Determine effective lives (account for async heart-break animation)
+    const effectiveLives = (lives.value === 1 && breakingHeartIndex.value !== null) ? 0 : lives.value
+
+    if (effectiveLives > 0) {
+      // Auto-restore after 2500ms with slide-back
       const wrongTo = to
       const originalFrom = from
+      const restoreToState = prevHintState || 'soft-hint'
       if (softFailTimeout) clearTimeout(softFailTimeout)
       softFailTimeout = setTimeout(() => {
         softFailTimeout = null
         const pieceAtWrong = getPieceOnSquare(wrongTo)
         if (!pieceAtWrong) return
+
         const fromPos = squareToPixelPos(wrongTo)
         const toPos = squareToPixelPos(originalFrom)
         slidingPiece.value = {
@@ -1269,61 +1276,26 @@ const tryMove = (from, to) => {
           endX: toPos.x, endY: toPos.y,
           hideSquare: wrongTo,
         }
+
         setTimeout(() => {
           slidingPiece.value = null
           softRestoreBoard()
+
           const expected = currentExpectedMove.value
           if (expected) hintHighlightSquare.value = expected.from
-          showMoveArrow.value = true
-          softMoveUsed.value = true
-          moveState.value = 'soft-hint'
+
+          if (prevHintState || failCountForCurrentMove.value >= 2 || softMoveUsed.value) {
+            showMoveArrow.value = true
+            softMoveUsed.value = true
+          } else {
+            softMoveUsed.value = false
+          }
+          moveState.value = restoreToState
         }, 300)
       }, 2500)
     } else {
-      moveState.value = 'wrong'
-    
-      // Soft fail: auto-restore after 2500ms with slide-back (only if lives remain)
-      if (lives.value > 0) {
-        const wrongTo = to
-        const originalFrom = from
-        if (softFailTimeout) clearTimeout(softFailTimeout)
-        softFailTimeout = setTimeout(() => {
-          softFailTimeout = null
-          const pieceAtWrong = getPieceOnSquare(wrongTo)
-          if (!pieceAtWrong) return
-          
-          // Start slide-back animation
-          const fromPos = squareToPixelPos(wrongTo)
-          const toPos = squareToPixelPos(originalFrom)
-          slidingPiece.value = {
-            type: pieceAtWrong.type,
-            startX: fromPos.x,
-            startY: fromPos.y,
-            endX: toPos.x,
-            endY: toPos.y,
-            hideSquare: wrongTo,
-          }
-          
-          // After slide animation completes, restore board and show hints
-          setTimeout(() => {
-            slidingPiece.value = null
-            softRestoreBoard()
-            
-            const expected = currentExpectedMove.value
-            if (expected) {
-              hintHighlightSquare.value = expected.from
-            }
-            
-            if (failCountForCurrentMove.value >= 2 || softMoveUsed.value) {
-              showMoveArrow.value = true
-              softMoveUsed.value = true
-            } else {
-              softMoveUsed.value = false
-            }
-            moveState.value = 'soft-hint'
-          }, 300)
-        }, 2500)
-      }
+      // Out of hearts — remember hint/solution state so "Keep Going" can restore it
+      preOutOfHeartsState.value = prevHintState
     }
     
     return false
@@ -1481,6 +1453,7 @@ const handleShowMoveArrow = () => {
 }
 
 const softMoveUsed = ref(false)
+const preOutOfHeartsState = ref(null)
 
 const handleSoftMove = () => {
   if (softMoveUsed.value) return
@@ -1548,9 +1521,18 @@ const handleSoftSolution = () => {
 }
 
 const handleRetry = () => {
+  const restoreTo = preOutOfHeartsState.value
+  preOutOfHeartsState.value = null
   restoreCheckpoint()
   displayedProgress.value = actualProgress.value
   displayedStreak.value = streak.value
+  if (restoreTo) {
+    const expected = currentExpectedMove.value
+    if (expected) hintHighlightSquare.value = expected.from
+    showMoveArrow.value = true
+    softMoveUsed.value = true
+    moveState.value = restoreTo
+  }
 }
 
 const openVideo = () => {
