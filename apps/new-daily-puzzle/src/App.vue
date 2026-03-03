@@ -197,8 +197,7 @@ const SUCCESS_SUBTITLES = {
 }
 
 const successSubtitle = computed(() => {
-  const base = SUCCESS_SUBTITLES[successTitle.value] || ''
-  return `${base}\nSolved in ${timerDisplay.value}`
+  return SUCCESS_SUBTITLES[successTitle.value] || ''
 })
 
 // Hint state
@@ -629,10 +628,15 @@ function onCoachBubbleLeave() {
 
 // Play Sloane voice when the coach bubble becomes visible with a new message
 let lastVoicedMessage = ''
+let introAutoStartTimer = null
 watch(showCoachBubble, (visible) => {
   if (visible && coachMessage.value && coachMessage.value !== lastVoicedMessage) {
     lastVoicedMessage = coachMessage.value
     playCoachVoice(coachMessage.value)
+    if (puzzlePhase.value === 'intro') {
+      if (!heartsEntrance.value) setTimeout(() => { heartsEntrance.value = true }, 300)
+      introAutoStartTimer = setTimeout(() => { if (puzzlePhase.value === 'intro') startPuzzle() }, 4000)
+    }
   } else if (!visible) {
     stopCoachVoice()
   }
@@ -864,6 +868,7 @@ const loadPuzzle = () => {
 const resetPuzzle = () => {
   stopCoachVoice()
   lastVoicedMessage = ''
+  if (introAutoStartTimer) { clearTimeout(introAutoStartTimer); introAutoStartTimer = null }
   stopTimer()
   timerSeconds.value = 0
   lives.value = puzzle.results.totalLives
@@ -925,7 +930,7 @@ const isEdgeRight = (square) => square.includes('h')
 // MOVE HANDLING
 // ============================================
 const handleSquareClick = (square) => {
-  // Only allow moves during playing phase, when awaiting input
+  if (puzzlePhase.value === 'intro') startPuzzle()
   if (puzzlePhase.value !== 'playing') return
   if (moveState.value === 'correct' || moveState.value === 'computer-moving' || moveState.value === 'wrong') return
   
@@ -1164,6 +1169,7 @@ const scheduleNextMove = (afterDelay = 3800) => {
 
 // Try to make a move (used by both click and drag)
 const tryMove = (from, to) => {
+  if (puzzlePhase.value === 'intro') startPuzzle()
   if (puzzlePhase.value !== 'playing') return false
   if (moveState.value === 'correct' || moveState.value === 'computer-moving' || moveState.value === 'wrong') return false
   classificationSquare.value = null
@@ -1306,6 +1312,7 @@ const tryMove = (from, to) => {
 // DRAG & DROP
 // ============================================
 const handleDragStart = (event, square) => {
+  if (puzzlePhase.value === 'intro') startPuzzle()
   if (puzzlePhase.value !== 'playing') return
   if (moveState.value === 'correct' || moveState.value === 'computer-moving' || moveState.value === 'wrong') return
   
@@ -1584,7 +1591,6 @@ const generateShareMessage = () => {
     `${heartsLine} ${successTitle.value}`,
     '',
     grid,
-    `Solved in ${timerDisplay.value}`,
   ].join('\n')
 }
 
@@ -1611,6 +1617,7 @@ const handleDialogueShare = async () => {
 }
 
 const startPuzzle = () => {
+  if (introAutoStartTimer) { clearTimeout(introAutoStartTimer); introAutoStartTimer = null }
   puzzlePhase.value = 'playing'
   moveState.value = 'awaiting'
   saveCheckpoint()
@@ -1852,8 +1859,8 @@ onUnmounted(() => {
             />
           </div>
 
-          <!-- Hearts + Timer (hidden until entrance animation triggers) -->
-          <div v-if="heartsEntrance || puzzlePhase === 'solved'" class="hearts-timer-row">
+          <!-- Hearts (hidden until entrance animation triggers) -->
+          <div v-if="heartsEntrance || puzzlePhase === 'solved'" class="hearts-row">
             <div class="hearts">
               <CcIcon 
                 v-for="i in puzzle.results.totalLives" 
@@ -1871,14 +1878,6 @@ onUnmounted(() => {
                 }"
                 :style="heartBreakStyle(i)"
               />
-            </div>
-            <div 
-              class="timer" 
-              :class="{ 'timer-enter': heartsEntrance }"
-              :style="heartsEntrance ? { animationDelay: (puzzle.results.totalLives * 120) + 'ms' } : {}"
-            >
-              <CcIcon name="time-clock-hollow-hand-left" :size="24" />
-              <span class="timer-text">{{ timerDisplay }}</span>
             </div>
           </div>
 
@@ -1904,23 +1903,10 @@ onUnmounted(() => {
 
         <!-- Footer -->
         <footer class="panel-footer">
-          <!-- Solved by text (intro only) -->
           <p v-if="puzzlePhase === 'intro'" class="solved-by-text">{{ puzzle.solvedByText }}</p>
-
           <div class="action-buttons">
-            <!-- Intro state: Start button -->
-            <template v-if="puzzlePhase === 'intro'">
-              <CcButton 
-                variant="primary" 
-                size="large" 
-                @click="startPuzzle"
-                class="start-button"
-              >
-                Start
-              </CcButton>
-            </template>
             <!-- Solved state -->
-            <template v-else-if="puzzlePhase === 'solved'">
+            <template v-if="puzzlePhase === 'solved'">
               <CcButton 
                 variant="secondary" 
                 size="large" 
@@ -2325,8 +2311,8 @@ body {
   }
 }
 
-/* Hearts + Timer */
-.hearts-timer-row {
+/* Hearts */
+.hearts-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2401,34 +2387,10 @@ body {
   }
 }
 
-.timer-enter {
-  opacity: 0;
-  transform: scale(0.75);
-  animation: heart-pop-in 200ms cubic-bezier(0, 0, 0.2, 1) forwards;
-}
-
 @keyframes heart-pop-in {
   0%   { opacity: 0; transform: scale(0.75); }
   70%  { opacity: 1; transform: scale(1.1); }
   100% { opacity: 1; transform: scale(1); }
-}
-
-.timer {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  color: var(--color-text-default, rgba(255, 255, 255, 0.72));
-}
-
-.timer-text {
-  /* text-large-bold monospace: 16px/20px, 600, system font + tabular nums */
-  font-family: var(--font-family-system, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Helvetica, Arial, sans-serif);
-  font-weight: 600;
-  font-size: 16px;
-  line-height: 20px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'lnum' 1, 'tnum' 1;
 }
 
 /* Video card fade-in transition */
@@ -2489,21 +2451,6 @@ body {
   font-weight: 600;
 }
 
-/* Solved By Text */
-.solved-by-text {
-  /* paragraph-medium-bold: 14px/20px, 600, system font */
-  font-family: var(--font-family-system, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Helvetica, Arial, sans-serif);
-  font-weight: 600;
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--color-text-subtle, rgba(255, 255, 255, 0.5));
-  text-align: center;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
-  width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin: 0;
-}
 
 .progress-slash {
   font-weight: 800;
@@ -2578,6 +2525,19 @@ body {
   gap: 1.2rem;
 }
 
+.solved-by-text {
+  font-family: var(--font-family-system, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, Helvetica, Arial, sans-serif);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--color-text-subtle, rgba(255, 255, 255, 0.5));
+  text-align: center;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
 .action-buttons {
   display: flex;
   gap: 0.8rem;
@@ -2595,8 +2555,7 @@ body {
   pointer-events: none;
 }
 
-.action-buttons .complete-button :deep(button),
-.action-buttons .start-button :deep(button) {
+.action-buttons .complete-button :deep(button) {
   width: 100%;
 }
 
