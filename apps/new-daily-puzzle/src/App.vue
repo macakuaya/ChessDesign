@@ -1,96 +1,17 @@
 <script setup>
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import { CcButton, CcIconButton, CcIcon, CcDropdownButton } from '@chesscom/design-system'
-// CcIconButton used for date picker arrows, CcDropdownButton for date selector
 import CoachBubble from './components/CoachBubble.vue'
 import SuccessDialogue from './components/SuccessDialogue.vue'
 import { playSound } from '@chess/components/sounds'
 import { getSuccessMessage } from './config/puzzleConfig'
+import { useSound } from './composables/useSound'
+import { useCoachVoice } from './composables/useCoachVoice'
+import { useHearts } from './composables/useHearts'
+import { useShare } from './composables/useShare'
 
-// Puzzle sound URLs from Chess.com CDN
-const PUZZLE_SOUNDS = {
-  correct: 'https://www.chess.com/bundles/web/sounds/correct-2-15.mp3',
-  incorrect: 'https://www.chess.com/bundles/web/sounds/incorrect-2-15.mp3',
-  puzzleSolved: 'https://www.chess.com/bundles/web/sounds/puzzles/solving/puzzle-solved.wav',
-  levelUp: 'https://www.chess.com/bundles/web/sounds/puzzles/level_up/level_up_award.wav',
-}
-
-// Preload puzzle sounds for instant playback
-const puzzleSoundCache = {}
-const preloadPuzzleSound = (key) => {
-  if (!puzzleSoundCache[key]) {
-    puzzleSoundCache[key] = new Audio(PUZZLE_SOUNDS[key])
-    puzzleSoundCache[key].preload = 'auto'
-  }
-  return puzzleSoundCache[key]
-}
-
-// Preload all puzzle sounds
-Object.keys(PUZZLE_SOUNDS).forEach(preloadPuzzleSound)
-
-// Play a puzzle sound
-const playPuzzleSound = (key) => {
-  const audio = preloadPuzzleSound(key)
-  audio.currentTime = 0 // Reset to start
-  audio.play().catch(error => console.warn('Failed to play sound:', error))
-}
-
-// ============================================
-// COACH VOICE (Sloane V7 via ElevenLabs)
-// ============================================
-const coachVoiceBase = import.meta.env.BASE_URL + 'audio/'
-const COACH_VOICE_MAP = {
-  'Welcome! It\'s nice to have you back.': 'intro.mp3',
-  'Find the best move for white.': 'awaiting.mp3',
-  "There's a better move, try again.": 'wrong.mp3',
-  'Out of hearts! See the solution or keep trying on your own.': 'out-of-hearts.mp3',
-  'Nice job! To learn a little more about this puzzle, watch the video.': 'solved.mp3',
-  'Look at the bishop on e4': 'hint-bishop-e4.mp3',
-  'Attack along the diagonal with the bishop': 'movehint-bishop.mp3',
-  'Bd5 is correct!': 'correct-bd5.mp3',
-  'Look at the rook on e1': 'hint-rook-e1.mp3',
-  'Deliver checkmate with the rook': 'movehint-rook.mp3',
-  'Re8# Checkmate!': 'correct-re8-checkmate.mp3',
-}
-
-const coachVoiceCache = {}
-const preloadCoachVoice = (filename) => {
-  if (!coachVoiceCache[filename]) {
-    coachVoiceCache[filename] = new Audio(coachVoiceBase + filename)
-    coachVoiceCache[filename].preload = 'auto'
-  }
-  return coachVoiceCache[filename]
-}
-Object.values(COACH_VOICE_MAP).forEach(preloadCoachVoice)
-
-const coachVoiceMuted = ref(false)
-let activeCoachVoice = null
-let coachVoiceEndedPromise = Promise.resolve()
-
-const playCoachVoice = (message) => {
-  if (coachVoiceMuted.value) return
-  if (activeCoachVoice) {
-    activeCoachVoice.pause()
-    activeCoachVoice.currentTime = 0
-  }
-  const filename = COACH_VOICE_MAP[message]
-  if (!filename) return
-  const audio = preloadCoachVoice(filename)
-  audio.currentTime = 0
-  audio.play().catch(e => console.warn('Coach voice playback failed:', e))
-  activeCoachVoice = audio
-  coachVoiceEndedPromise = new Promise(resolve => { audio.onended = resolve })
-}
-
-const waitForCoachVoice = () => coachVoiceEndedPromise
-
-const stopCoachVoice = () => {
-  if (activeCoachVoice) {
-    activeCoachVoice.pause()
-    activeCoachVoice.currentTime = 0
-    activeCoachVoice = null
-  }
-}
+const { playPuzzleSound } = useSound()
+const { coachVoiceMuted, playCoachVoice, waitForCoachVoice, stopCoachVoice } = useCoachVoice()
 
 // Icon names from Figma design
 const icons = {
@@ -166,13 +87,6 @@ const moveState = ref('awaiting') // 'awaiting', 'wrong', 'hint', 'correct', 'co
 const streak = ref(0)
 const selectedSquare = ref(null)
 const lastMove = ref(null) // { from, to }
-const heartsEntrance = ref(false) // Triggers staggered heart + timer entrance animation
-const heartbeatActive = ref(false) // Pulses last green heart when lives === 1
-let heartbeatDelayTimer = null
-const breakingHeartIndex = ref(null) // Which heart (1-indexed) is mid-break animation
-const breakingPhase = ref(null) // 'shrinking' | 'snapping'
-let breakingHeartTimer = null
-let breakingShrinkTimer = null
 const showVideoCard = ref(false) // Delayed entrance for video card after solved bubble
 const showSuccessDialogue = ref(false) // Success dialogue after solving
 watch(() => puzzlePhase.value, (phase) => {
@@ -290,69 +204,11 @@ const replayForward = () => {
     showCoachBubble.value = true
   }
 }
-const lives = ref(puzzle.results.totalLives) // Hearts / lives remaining
-
-// Heartbeat: activate with brief delay when lives drops to 1, stop on next move
-watch(lives, (val) => {
-  if (heartbeatDelayTimer) { clearTimeout(heartbeatDelayTimer); heartbeatDelayTimer = null }
-  if (val === 1) {
-    heartbeatDelayTimer = setTimeout(() => { heartbeatActive.value = true }, 600)
-  } else {
-    heartbeatActive.value = false
-  }
-})
-watch(moveState, (val) => {
-  if (val !== 'awaiting' && val !== 'soft-hint' && val !== 'soft-solution') {
-    heartbeatActive.value = false
-    if (heartbeatDelayTimer) { clearTimeout(heartbeatDelayTimer); heartbeatDelayTimer = null }
-  } else if (lives.value === 1 && !heartbeatActive.value && !heartbeatDelayTimer) {
-    heartbeatDelayTimer = setTimeout(() => { heartbeatActive.value = true }, 600)
-  }
-})
-
-// Heartbeat sound — synthesized lub-dub via Web Audio API, synced to 2000ms CSS animation
-let heartbeatAudioCtx = null
-let heartbeatInterval = null
-
-const playLubDub = () => {
-  if (!heartbeatAudioCtx) return
-  const ctx = heartbeatAudioCtx
-  const now = ctx.currentTime
-
-  const thud = (time, freq, gain, duration) => {
-    const osc = ctx.createOscillator()
-    const env = ctx.createGain()
-    osc.type = 'sine'
-    osc.frequency.value = freq
-    env.gain.setValueAtTime(gain, time)
-    env.gain.exponentialRampToValueAtTime(0.001, time + duration)
-    osc.connect(env)
-    env.connect(ctx.destination)
-    osc.start(time)
-    osc.stop(time + duration)
-  }
-
-  thud(now, 50, 0.12, 0.10)        // lub: softer, 50Hz
-  thud(now + 0.30, 55, 0.18, 0.12) // dub: stronger, 55Hz — 300ms later
-}
-
-const startHeartbeatSound = () => {
-  try {
-    heartbeatAudioCtx = new (window.AudioContext || window.webkitAudioContext)()
-    playLubDub()
-    heartbeatInterval = setInterval(playLubDub, 2000)
-  } catch (e) { /* Web Audio not available */ }
-}
-
-const stopHeartbeatSound = () => {
-  if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null }
-  if (heartbeatAudioCtx) { heartbeatAudioCtx.close().catch(() => {}); heartbeatAudioCtx = null }
-}
-
-watch(heartbeatActive, (active) => {
-  if (active) startHeartbeatSound()
-  else stopHeartbeatSound()
-})
+// Hearts, lives, and heartbeat (extracted composable)
+const {
+  lives, heartsEntrance, heartbeatActive, breakingHeartIndex, breakingPhase,
+  loseLife, heartBreakStyle, stopHeartbeatSound, reset: resetHearts, cleanup: cleanupHearts,
+} = useHearts(puzzle.results.totalLives, moveState)
 
 const timerSeconds = ref(0) // Puzzle timer in seconds
 let timerInterval = null
@@ -378,40 +234,6 @@ const stopTimer = () => {
     clearInterval(timerInterval)
     timerInterval = null
   }
-}
-
-// Lose a life — two-phase break animation:
-// 1. Shrink: filled heart compresses + desaturates (150ms)
-// 2. Snap: icon swaps to broken, pops back to full size (100ms)
-const loseLife = () => {
-  if (lives.value <= 0) return
-  if (breakingHeartIndex.value !== null) {
-    lives.value--
-    return
-  }
-  breakingHeartIndex.value = lives.value
-  breakingPhase.value = 'shrinking'
-
-  if (breakingShrinkTimer) clearTimeout(breakingShrinkTimer)
-  breakingShrinkTimer = setTimeout(() => {
-    breakingShrinkTimer = null
-    lives.value--
-    breakingPhase.value = 'snapping'
-  }, 195)
-
-  if (breakingHeartTimer) clearTimeout(breakingHeartTimer)
-  breakingHeartTimer = setTimeout(() => {
-    breakingHeartIndex.value = null
-    breakingPhase.value = null
-    breakingHeartTimer = null
-  }, 300)
-}
-
-const heartBreakStyle = (i) => {
-  if (heartsEntrance.value && breakingHeartIndex.value !== i) {
-    return { animationDelay: ((i - 1) * 120) + 'ms' }
-  }
-  return {}
 }
 
 // Drag state
@@ -872,18 +694,10 @@ const resetPuzzle = () => {
   if (introAutoStartTimer) { clearTimeout(introAutoStartTimer); introAutoStartTimer = null }
   stopTimer()
   timerSeconds.value = 0
-  lives.value = puzzle.results.totalLives
   streak.value = 0
   displayedProgress.value = 0
   displayedStreak.value = 0
-  heartsEntrance.value = false
-  heartbeatActive.value = false
-  stopHeartbeatSound()
-  if (heartbeatDelayTimer) { clearTimeout(heartbeatDelayTimer); heartbeatDelayTimer = null }
-  breakingHeartIndex.value = null
-  breakingPhase.value = null
-  if (breakingHeartTimer) { clearTimeout(breakingHeartTimer); breakingHeartTimer = null }
-  if (breakingShrinkTimer) { clearTimeout(breakingShrinkTimer); breakingShrinkTimer = null }
+  resetHearts(puzzle.results.totalLives)
   loadPuzzle()
 }
 
@@ -1485,75 +1299,8 @@ const openVideo = () => {
   // No-op for now
 }
 
-// ============================================
-// SHARE
-// ============================================
-const panelShareCopied = ref(false)
-const dialogueShareCopied = ref(false)
-
-const generateShareMessage = () => {
-  const board = Array.from({ length: 8 }, () => Array(8).fill(null))
-  const initialPieces = parseFEN(puzzle.initialFEN)
-
-  for (const p of initialPieces) {
-    const file = p.square.charCodeAt(0) - 'a'.charCodeAt(0)
-    const rank = parseInt(p.square[1]) - 1
-    const row = 7 - rank
-    board[row][file] = p.type.startsWith('w') ? 'w' : 'b'
-  }
-
-  const solutionSquares = new Set()
-  for (const m of puzzle.moves) {
-    solutionSquares.add(m.from)
-    solutionSquares.add(m.to)
-  }
-  for (const sq of solutionSquares) {
-    const file = sq.charCodeAt(0) - 'a'.charCodeAt(0)
-    const rank = parseInt(sq[1]) - 1
-    const row = 7 - rank
-    if (board[row][file] !== 'b') board[row][file] = 'w'
-  }
-
-  const grid = board.map((row, r) =>
-    row.map((cell, c) => {
-      if (cell === 'b') return '⚫'
-      if (cell === 'w') return '🟡'
-      return (r + c) % 2 === 0 ? '⬜' : '🟩'
-    }).join('')
-  ).join('\n')
-
-  const heartsLine = '💚'.repeat(lives.value) + '🖤'.repeat(puzzle.results.totalLives - lives.value)
-
-  return [
-    'Chess.com/daily',
-    `\u201C${puzzle.title}\u201D`,
-    `${heartsLine} ${successTitle.value}`,
-    '',
-    grid,
-  ].join('\n')
-}
-
-const handlePanelShare = async () => {
-  const message = generateShareMessage()
-  try {
-    await navigator.clipboard.writeText(message)
-    panelShareCopied.value = true
-    setTimeout(() => { panelShareCopied.value = false }, 2000)
-  } catch (e) {
-    console.warn('Clipboard copy failed:', e)
-  }
-}
-
-const handleDialogueShare = async () => {
-  const message = generateShareMessage()
-  try {
-    await navigator.clipboard.writeText(message)
-    dialogueShareCopied.value = true
-    setTimeout(() => { dialogueShareCopied.value = false }, 2000)
-  } catch (e) {
-    console.warn('Clipboard copy failed:', e)
-  }
-}
+// Share (extracted composable)
+const { panelShareCopied, dialogueShareCopied, handlePanelShare, handleDialogueShare } = useShare(puzzle, parseFEN, lives, successTitle)
 
 const startPuzzle = () => {
   if (introAutoStartTimer) { clearTimeout(introAutoStartTimer); introAutoStartTimer = null }
@@ -1583,12 +1330,9 @@ onUnmounted(() => {
   document.removeEventListener('mouseup', handleDragEnd)
   document.removeEventListener('touchmove', handleDragMove)
   document.removeEventListener('touchend', handleDragEnd)
-  // Clean up timer and soft-fail timeout
   stopTimer()
   if (softFailTimeout) { clearTimeout(softFailTimeout); softFailTimeout = null }
-  if (breakingHeartTimer) { clearTimeout(breakingHeartTimer); breakingHeartTimer = null }
-  if (breakingShrinkTimer) { clearTimeout(breakingShrinkTimer); breakingShrinkTimer = null }
-  stopHeartbeatSound()
+  cleanupHearts()
   stopCoachVoice()
 })
 
