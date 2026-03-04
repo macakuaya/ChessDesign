@@ -3,6 +3,8 @@ import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import { CcButton, CcIconButton, CcIcon, CcDropdownButton } from '@chesscom/design-system'
 import CoachBubble from './components/CoachBubble.vue'
 import SuccessDialogue from './components/SuccessDialogue.vue'
+import ArchiveView from './components/ArchiveView.vue'
+import DatePicker from './components/DatePicker.vue'
 import { playSound } from '@chess/components/sounds'
 import { getSuccessMessage } from './config/puzzleConfig'
 import { useSound } from './composables/useSound'
@@ -51,9 +53,9 @@ const fionaAvatarUrl = import.meta.env.BASE_URL + 'images/fiona.png'
 // ============================================
 const puzzle = {
   title: 'Clear the Decks',
-  date: 'March 19, 2024',
+  date: 'March 4, 2026',
   solvedByText: 'Solved by Erik, drRittman, and 1,269,372 more!',
-  initialFEN: '6kb/7p/p1n3bP/1p4P1/4Bp2/BPq5/P1P2P2/4R3 w - - 0 1',
+  initialFEN: '6kb/7p/p1n3bP/1p4P1/4Bp2/BPq5/P1P2P2/4R2K w - - 0 1',
   hint: 'Look at the bishop on e4',
   moves: [
     { from: 'e4', to: 'd5', piece: 'B', notation: 'Bd5', moveHint: 'Attack along the diagonal with the bishop' },
@@ -89,6 +91,7 @@ const selectedSquare = ref(null)
 const lastMove = ref(null) // { from, to }
 const showVideoCard = ref(false) // Delayed entrance for video card after solved bubble
 const showSuccessDialogue = ref(false) // Success dialogue after solving
+const showArchiveView = ref(false)
 watch(() => puzzlePhase.value, (phase) => {
   if (phase === 'solved') {
     setTimeout(() => { showVideoCard.value = true }, 600)
@@ -1505,29 +1508,21 @@ onUnmounted(() => {
           </div>
         </header>
 
+        <!-- Archive View -->
+        <ArchiveView
+          v-if="showArchiveView"
+          :puzzle-title="puzzle.title"
+          @close="showArchiveView = false"
+        />
+
         <!-- Content -->
-        <div class="panel-content">
+        <div v-else class="panel-content">
           <!-- Date Picker -->
-          <div class="date-picker">
-            <CcIconButton
-              :icon="{ name: 'arrow-chevron-left', variant: 'glyph' }"
-              variant="hovered"
-              size="small"
-              tooltip="Previous day"
-            />
-            <CcDropdownButton
-              :label="puzzle.date"
-              variant="ghost"
-              size="small"
-            />
-            <CcIconButton
-              :icon="{ name: 'arrow-chevron-right', variant: 'glyph' }"
-              variant="hovered"
-              size="small"
-              tooltip="Next day"
-              disabled
-            />
-          </div>
+          <DatePicker
+            :label="puzzle.date"
+            :next-disabled="true"
+            @toggle="showArchiveView = !showArchiveView"
+          />
 
           <!-- Coach -->
           <div class="coach-container">
@@ -1585,7 +1580,7 @@ onUnmounted(() => {
         </div>
 
         <!-- Footer -->
-        <footer class="panel-footer">
+        <footer v-if="!showArchiveView" class="panel-footer">
           <p class="solved-by-text">{{ puzzle.solvedByText }}</p>
           <div class="action-buttons">
             <!-- Solved state -->
@@ -1949,20 +1944,6 @@ body {
 
 .coach-container {
   max-height: 96px;
-}
-
-/* Date Picker */
-.date-picker {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-}
-
-@media (hover: hover) {
-  .date-picker :deep(.cc-dropdown-button-ghost:not([disabled]):hover) {
-    background: var(--color-bg-subtler);
-  }
 }
 
 /* Hearts */
