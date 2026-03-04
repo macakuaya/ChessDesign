@@ -1312,6 +1312,12 @@ const startPuzzle = () => {
   saveCheckpoint()
 }
 
+const closeArchive = () => {
+  showArchiveView.value = false
+  showCoachBubble.value = false
+  nextTick(() => { showCoachBubble.value = true })
+}
+
 // ============================================
 // INITIALIZATION
 // ============================================
@@ -1512,7 +1518,7 @@ onUnmounted(() => {
         <ArchiveView
           v-if="showArchiveView"
           :puzzle-title="puzzle.title"
-          @close="showArchiveView = false"
+          @close="closeArchive"
         />
 
         <!-- Content -->
@@ -1521,7 +1527,7 @@ onUnmounted(() => {
           <DatePicker
             :label="puzzle.date"
             :next-disabled="true"
-            @toggle="showArchiveView = !showArchiveView"
+            @toggle="showArchiveView ? closeArchive() : (showArchiveView = true)"
           />
 
           <!-- Coach -->
