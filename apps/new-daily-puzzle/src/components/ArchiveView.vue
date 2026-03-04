@@ -179,7 +179,7 @@ const weeks = computed(() => {
                     v-else-if="getState(day) === 'streak' || getState(day) === 'today'"
                     name="element-fire-blank"
                     :size="16"
-                    :style="{ color: streakColor }"
+                    class="icon-streak"
                   />
                 </div>
                 <span
@@ -195,8 +195,8 @@ const weeks = computed(() => {
       <!-- Legend -->
       <div class="legend">
         <div class="legend-item">
-          <CcIcon name="element-fire-blank" :size="16" :style="{ color: streakColor }" />
-          <span class="legend-text">{{ streakLength }} day{{ streakLength !== 1 ? 's' : '' }} Streak</span>
+          <CcIcon name="element-fire-blank" :size="16" class="icon-streak" />
+          <span class="legend-text">{{ streakLength }} day{{ streakLength !== 1 ? 's' : '' }} in a row!</span>
         </div>
       </div>
     </div>
@@ -375,6 +375,10 @@ const weeks = computed(() => {
   color: var(--color-green-300, #81B64C);
 }
 
+.icon-streak {
+  color: var(--color-streak-lowest, #E3AA24);
+}
+
 
 /* Legend */
 .legend {
@@ -395,7 +399,7 @@ const weeks = computed(() => {
   font-weight: 600;
   font-size: 14px;
   line-height: 16px;
-  color: var(--color-text-default, rgba(255, 255, 255, 0.72));
+  color: var(--color-text-bolder, rgba(255, 255, 255, 0.85));
   white-space: nowrap;
 }
 </style>
