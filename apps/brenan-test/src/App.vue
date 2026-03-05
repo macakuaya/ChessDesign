@@ -3,8 +3,8 @@
     <NavSidebar />
     <main class="page-content">
       <div class="images-container">
-        <img :src="`${baseUrl}column.png`" alt="Column" />
-        <img :src="`${baseUrl}sidebar.png`" alt="Sidebar" />
+        <img :src="`${baseUrl}column.png`" alt="Column" class="column-image" />
+        <img :src="`${baseUrl}sidebar.png`" alt="Sidebar" class="sidebar-image" />
       </div>
     </main>
   </div>
@@ -57,5 +57,15 @@ body.dark-mode {
   display: flex;
   gap: 24px;
   align-items: flex-start;
+}
+
+.column-image {
+  width: 728px;
+  height: auto;
+}
+
+.sidebar-image {
+  width: 300px;
+  height: auto;
 }
 </style>
