@@ -225,7 +225,7 @@ const mainLinks = [
 ]
 
 const showNotifications = ref(false)
-const notificationCount = ref(2)
+const notificationCount = ref(3)
 const showUnreadOnly = ref(false)
 const showMenu = ref(false)
 const selectedCategory = ref('clubs')
@@ -263,10 +263,13 @@ const categories = [
 function buildCategoryData() {
   return {
     clubs: [
-      { id: 'club-1', type: 'Club News', title: 'Barcelona Chess Club', body: 'Posted news', time: '2h', avatar: avatars.barcelona, unread: true, hasActions: false, rollup: null },
       { id: 'club-4', type: 'Club Join Request', title: 'Barcelona Chess Club', body: 'NihalSarin wants to join', time: '3h', avatar: avatars.barcelona, unread: true, hasActions: true, rollup: null },
-      { id: 'club-2', type: 'Club Note', title: 'Team USA', body: 'Has 3 new notes', time: '5h', avatar: avatars.teamusa, unread: false, hasActions: false, rollup: null },
-      { id: 'club-3', type: 'Club Forum Topic', title: 'Barcelona Chess Club', body: 'Has 3 new topics', time: '1d', avatar: avatars.barcelona, unread: false, hasActions: false, rollup: null },
+      { id: 'club-1a', type: 'Clubs · Club News (Aggregate: 1)', title: 'Barcelona Chess Club', body: 'Posted Announcement: Weekend Tournament Results', time: '2h', avatar: avatars.barcelona, unread: true, hasActions: false, rollup: null },
+      { id: 'club-1b', type: 'Clubs · Club News (Aggregate: >1)', title: 'Barcelona Chess Club', body: 'Has 3 new announcements', time: '2h', avatar: avatars.barcelona, unread: true, hasActions: false, rollup: null },
+      { id: 'club-2a', type: 'Clubs · Club Note (Aggregate: 1)', title: 'Team USA', body: 'Has 1 new note', time: '5h', avatar: avatars.teamusa, unread: false, hasActions: false, rollup: null },
+      { id: 'club-2b', type: 'Clubs · Club Note (Aggregate: >1)', title: 'Team USA', body: 'Has 8 new notes', time: '5h', avatar: avatars.teamusa, unread: false, hasActions: false, rollup: null },
+      { id: 'club-3a', type: 'Clubs · Club Forum Topic (Aggregate: 1)', title: 'Barcelona Chess Club', body: 'New Topic: Best Opening for Beginners', time: '1d', avatar: avatars.barcelona, unread: false, hasActions: false, rollup: null },
+      { id: 'club-3b', type: 'Clubs · Club Forum Topic (Aggregate: >1)', title: 'Barcelona Chess Club', body: 'Has 3 new Topics', time: '1d', avatar: avatars.barcelona, unread: false, hasActions: false, rollup: null },
     ],
 
     social: [
