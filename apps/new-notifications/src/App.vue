@@ -82,8 +82,17 @@
 
     <!-- Notifications Popover -->
     <div v-show="showNotifications" class="notif-popover" @click.stop>
+      <!-- Empty State -->
+      <div v-if="filteredNotifications.length === 0" class="notif-empty">
+        <cc-icon name="media-bell-fill" :size="48" />
+        <div class="notif-empty-copy">
+          <p class="notif-empty-title">You're All Caught Up!</p>
+          <p class="notif-empty-body">Notifications about clubs, players you follow, and more will appear here</p>
+        </div>
+      </div>
+
       <!-- Notification List -->
-      <div class="notif-list">
+      <div v-else class="notif-list">
         <div
           v-for="n in filteredNotifications"
           :key="n.id"
@@ -147,17 +156,29 @@
       <div class="notif-footer">
         <div class="notif-footer-left">
           <cc-icon-button
-            :icon="{ name: 'utility-cogwheel', variant: 'glyph' }"
+            :icon="{ name: 'mark-ellipsis-horizontal', variant: 'glyph' }"
             variant="ghost"
             size="small"
-            tooltip="Notifications Settings"
+            @click.stop="showMenu = !showMenu"
           />
-          <cc-icon-button
-            :icon="{ name: 'mark-check-double', variant: 'glyph' }"
-            variant="ghost"
-            size="small"
-            tooltip="Clear All Notifications"
-          />
+          <div v-show="showMenu" class="notif-menu" @click.stop>
+            <cc-dropdown-item
+              label="Mark all as read"
+              :icon="{ name: 'mark-check-double' }"
+              :is-disabled="!hasUnread"
+              @click="markAllAsRead"
+            />
+            <cc-dropdown-item
+              label="Delete all"
+              :icon="{ name: 'utility-trashbin' }"
+              :is-disabled="notifications.length === 0"
+              @click="deleteAll"
+            />
+            <cc-dropdown-item
+              label="Notification Settings"
+              :icon="{ name: 'utility-cogwheel' }"
+            />
+          </div>
         </div>
         <div class="notif-footer-right">
           <span class="notif-footer-label cc-text-small-bold">Only show unread</span>
@@ -166,7 +187,7 @@
       </div>
     </div>
 
-    <main class="page-content" @click="showNotifications = false">
+    <main class="page-content">
     </main>
 
     <!-- Prototype Navigation Menu -->
@@ -187,8 +208,9 @@ import {
   CcNotificationBadge,
   CcIconButton,
   CcSwitch,
+  CcDropdownItem,
 } from '@chesscom/design-system'
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import PrototypeMenu from './components/PrototypeMenu.vue'
 
 const mainLinks = [
@@ -201,6 +223,7 @@ const mainLinks = [
 const showNotifications = ref(false)
 const notificationCount = ref(2)
 const showUnreadOnly = ref(false)
+const showMenu = ref(false)
 const selectedCategory = ref('clubs')
 const highlightedId = ref(null)
 
@@ -309,6 +332,8 @@ watch(selectedCategory, (cat) => {
   }
 })
 
+const hasUnread = computed(() => notifications.value.some(n => n.unread))
+
 const filteredNotifications = computed(() => {
   if (showUnreadOnly.value) {
     return notifications.value.filter(n => n.unread)
@@ -323,12 +348,36 @@ function markNonActionableAsRead() {
   notificationCount.value = notifications.value.filter(n => n.unread).length
 }
 
+function markAllAsRead() {
+  notifications.value.forEach(n => { n.unread = false })
+  notificationCount.value = 0
+  showMenu.value = false
+}
+
+function deleteAll() {
+  notifications.value = []
+  notificationCount.value = 0
+  showMenu.value = false
+}
+
 function toggleNotifications() {
   showNotifications.value = !showNotifications.value
   if (showNotifications.value) {
     markNonActionableAsRead()
   }
 }
+
+function onDocumentClick(e) {
+  showMenu.value = false
+  if (!showNotifications.value) return
+  const popover = document.querySelector('.notif-popover')
+  const bell = document.querySelector('.nav-footer-btn-active')
+  if (popover?.contains(e.target) || bell?.contains(e.target)) return
+  showNotifications.value = false
+}
+
+onMounted(() => document.addEventListener('click', onDocumentClick))
+onUnmounted(() => document.removeEventListener('click', onDocumentClick))
 
 function dismissNotification(id) {
   notifications.value = notifications.value.filter(n => n.id !== id)
@@ -639,7 +688,7 @@ body.dark-mode {
   box-shadow: 0px 2px 4px 0px rgba(0,0,0,0.3);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: clip;
   z-index: 100;
 }
 
@@ -669,6 +718,43 @@ body.dark-mode {
 .notif-tab-active {
   border-bottom: 3px solid rgba(255,255,255,0.72);
   color: var(--color-text-bolder, rgba(255,255,255,0.85));
+}
+
+/* -- Empty State -- */
+
+.notif-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-12, 12px);
+  padding: var(--space-16, 16px);
+  color: var(--color-icon-default, rgba(255,255,255,0.5));
+}
+
+.notif-empty-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4, 4px);
+  text-align: center;
+  width: 100%;
+  font-size: var(--size-medium, 14px);
+  line-height: var(--line-height-medium-paragraph, 20px);
+  font-family: var(--family-body, 'Inter', sans-serif);
+}
+
+.notif-empty-title {
+  color: var(--color-text-bolder, rgba(255,255,255,0.85));
+  font-weight: var(--weight-bold, 600);
+  margin: 0;
+}
+
+.notif-empty-body {
+  color: var(--color-text-subtle, rgba(255,255,255,0.5));
+  font-weight: var(--weight-regular, 400);
+  margin: 0;
 }
 
 /* -- Notification List -- */
@@ -840,12 +926,30 @@ body.dark-mode {
   flex-shrink: 0;
   padding: 0 var(--space-8, 8px);
   border-top: 1px solid var(--color-border-default, rgba(255,255,255,0.1));
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
+  z-index: 1;
 }
 
 .notif-footer-left {
   display: flex;
   align-items: center;
+  position: relative;
+}
+
+.notif-menu {
+  position: absolute;
+  bottom: calc(100% + var(--space-8, 8px));
+  left: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-opaque-lighter, #312e2b);
+  border: 1px solid var(--color-border-default, rgba(255,255,255,0.1));
+  border-radius: var(--radius-l, 5px);
+  box-shadow: 0px 2px 4px 0px var(--color-transparent-black-30, rgba(0,0,0,0.3));
+  overflow: clip;
+  white-space: nowrap;
 }
 
 .notif-footer-right {
