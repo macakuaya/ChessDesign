@@ -3,8 +3,12 @@
     <NavSidebar />
     <main class="page-content">
       <div class="images-container">
-        <img :src="`${baseUrl}column.png`" alt="Column" class="column-image" />
-        <img :src="`${baseUrl}sidebar.png`" alt="Sidebar" class="sidebar-image" />
+        <div class="column-section">
+          <CoachBubble message="Ah, my favorite student! It's good to see you." />
+          <RecommendedActivities />
+          <div class="placeholder-column"></div>
+        </div>
+        <div class="placeholder-sidebar"></div>
       </div>
     </main>
   </div>
@@ -12,8 +16,8 @@
 
 <script setup>
 import NavSidebar from './components/NavSidebar.vue'
-
-const baseUrl = import.meta.env.BASE_URL
+import CoachBubble from './components/CoachBubble.vue'
+import RecommendedActivities from './components/RecommendedActivities.vue'
 </script>
 
 <style>
@@ -33,6 +37,13 @@ body {
 
 body.dark-mode {
   background: var(--color-gray-800, #312E2B);
+  --color-bg-speech: var(--color-neutrals-white, #FFFFFF);
+  --color-text-speech: var(--color-gray-800, #312E2B);
+}
+
+:root {
+  --coach-tail-width: 1.5rem;
+  --coach-avatar-speech-overlap: var(--space-4, 0.4rem);
 }
 </style>
 
@@ -59,13 +70,28 @@ body.dark-mode {
   align-items: flex-start;
 }
 
-.column-image {
+.column-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   width: 728px;
-  height: auto;
+  flex-shrink: 0;
 }
 
-.sidebar-image {
+.placeholder-column {
+  width: 100%;
+  height: 160rem;
+  border-radius: var(--radius-10, 1rem);
+  box-sizing: border-box;
+  background-color: var(--color-bg-secondary);
+}
+
+.placeholder-sidebar {
   width: 300px;
-  height: auto;
+  height: 160rem;
+  flex-shrink: 0;
+  border-radius: var(--radius-10, 1rem);
+  box-sizing: border-box;
+  background-color: var(--color-bg-secondary);
 }
 </style>
