@@ -56,9 +56,9 @@ const puzzle = {
   date: 'March 4, 2026',
   solvedByText: 'Solved by Erik, drRittman, and 1,269,372 more!',
   initialFEN: '6kb/7p/p1n3bP/1p4P1/4Bp2/BPq5/P1P2P2/4R2K w - - 0 1',
-  hint: 'Look at the bishop on e4',
+  hint: 'Look at this piece and imagine what comes next.',
   moves: [
-    { from: 'e4', to: 'd5', piece: 'B', notation: 'Bd5', moveHint: 'Attack along the diagonal with the bishop' },
+    { from: 'e4', to: 'd5', piece: 'B', notation: 'Bd5', moveHint: 'Here\'s what I would play.' },
     { from: 'g6', to: 'f7', piece: 'b', notation: 'Bf7', isComputer: true },
     { from: 'e1', to: 'e8', piece: 'R', notation: 'Re8', isCheckmate: true, kingSquare: 'g8', moveHint: 'Deliver checkmate with the rook' },
   ],
@@ -303,7 +303,9 @@ const coachMessage = computed(() => {
     return 'Welcome! It\'s nice to have you back.'
   }
   if (puzzlePhase.value === 'solved') {
-    return 'Nice job! To learn a little more about this puzzle, watch the video.'
+    if (lives.value === puzzle.results.totalLives) return 'That\'s right! You solved with no mistakes.'
+    if (lives.value === 1) return 'Just in time! You solved with only one heart remaining.'
+    return 'Nice! Watch the video to learn more about this puzzle.'
   }
   switch (moveState.value) {
     case 'awaiting':
@@ -318,36 +320,25 @@ const coachMessage = computed(() => {
         const expected = currentExpectedMove.value
         return expected?.moveHint || 'This is the correct move'
       }
-      const expected = currentExpectedMove.value
-      if (expected) {
-        const pieceNames = { 'K': 'king', 'Q': 'queen', 'R': 'rook', 'B': 'bishop', 'N': 'knight', 'P': 'pawn' }
-        const name = pieceNames[expected.piece?.toUpperCase()] || 'piece'
-        return `Look at the ${name} on ${expected.from}`
-      }
-      return puzzle.hint
+      return 'Look at this piece and imagine what comes next.'
     }
     case 'soft-solution': {
       const expected = currentExpectedMove.value
       return expected?.moveHint || 'This is the correct move'
     }
     case 'hint': {
-      const expected = currentExpectedMove.value
       if (softMoveUsed.value) {
+        const expected = currentExpectedMove.value
         return expected?.moveHint || 'This is the correct move'
       }
-      if (expected) {
-        const pieceNames = { 'K': 'king', 'Q': 'queen', 'R': 'rook', 'B': 'bishop', 'N': 'knight', 'P': 'pawn' }
-        const name = pieceNames[expected.piece?.toUpperCase()] || 'piece'
-        return `Look at the ${name} on ${expected.from}`
-      }
-      return puzzle.hint
+      return 'Look at this piece and imagine what comes next.'
     }
     case 'correct': {
       const move = currentExpectedMove.value
       if (move?.isCheckmate) {
-        lastCorrectMessage.value = `${move.notation}# Checkmate!`
+        lastCorrectMessage.value = 'Exactly!'
       } else {
-        lastCorrectMessage.value = `${move?.notation} is correct!`
+        lastCorrectMessage.value = 'Nice job. That was the best move.'
       }
       return lastCorrectMessage.value
     }

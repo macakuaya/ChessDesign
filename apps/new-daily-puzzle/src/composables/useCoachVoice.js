@@ -6,13 +6,14 @@ const COACH_VOICE_MAP = {
   'Find the best move for white.': 'awaiting.mp3',
   "There's a better move, try again.": 'wrong.mp3',
   'Out of hearts! See the solution or keep trying on your own.': 'out-of-hearts.mp3',
-  'Nice job! To learn a little more about this puzzle, watch the video.': 'solved.mp3',
-  'Look at the bishop on e4': 'hint-bishop-e4.mp3',
-  'Attack along the diagonal with the bishop': 'movehint-bishop.mp3',
-  'Bd5 is correct!': 'correct-bd5.mp3',
-  'Look at the rook on e1': 'hint-rook-e1.mp3',
+  'That\'s right! You solved with no mistakes.': 'solved-perfect.mp3',
+  'Nice! Watch the video to learn more about this puzzle.': 'solved-generic.mp3',
+  'Just in time! You solved with only one heart remaining.': 'solved-last-heart.mp3',
+  'Look at this piece and imagine what comes next.': 'hint-generic.mp3',
+  'Here\'s what I would play.': 'movehint-generic.mp3',
+  'Nice job. That was the best move.': 'correct-generic.mp3',
   'Deliver checkmate with the rook': 'movehint-rook.mp3',
-  'Re8# Checkmate!': 'correct-re8-checkmate.mp3',
+  'Exactly!': 'correct-checkmate.mp3',
 }
 
 const coachVoiceCache = {}
