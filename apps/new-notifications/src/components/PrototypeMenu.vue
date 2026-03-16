@@ -70,7 +70,8 @@ function getSelectedLabel() {
               v-for="n in notificationNames"
               :key="n.id"
               class="type-item"
-              @click="$emit('highlight', n.id)"
+              @mouseenter="$emit('highlight', n.id)"
+              @mouseleave="$emit('highlight', null)"
             >
               <span class="type-item-label cc-text-small">{{ n.label }}</span>
               <CcIcon name="arrow-chevron-right" :size="12" class="type-item-arrow" />

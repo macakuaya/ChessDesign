@@ -369,7 +369,8 @@ function onDocumentClick(e) {
   if (!showNotifications.value) return
   const popover = document.querySelector('.notif-popover')
   const bell = document.querySelector('.nav-footer-btn-active')
-  if (popover?.contains(e.target) || bell?.contains(e.target)) return
+  const protoMenu = document.querySelector('.prototype-menu-panel')
+  if (popover?.contains(e.target) || bell?.contains(e.target) || protoMenu?.contains(e.target)) return
   showNotifications.value = false
 }
 
@@ -383,16 +384,16 @@ function dismissNotification(id) {
 
 function highlightNotification(id) {
   showNotifications.value = true
-  highlightedId.value = null
+  if (id === null) {
+    highlightedId.value = null
+    return
+  }
+  highlightedId.value = id
   nextTick(() => {
-    highlightedId.value = id
     const el = document.querySelector(`[data-notif-id="${id}"]`)
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
-    setTimeout(() => {
-      highlightedId.value = null
-    }, 1500)
   })
 }
 </script>
@@ -955,11 +956,6 @@ body.dark-mode {
 /* -- Highlight animation -- */
 
 .notif-item-highlighted {
-  animation: notif-flash 1.5s ease-out;
-}
-
-@keyframes notif-flash {
-  0% { background: rgba(129, 182, 76, 0.3); }
-  100% { background: transparent; }
+  background: rgba(129, 182, 76, 0.15);
 }
 </style>
