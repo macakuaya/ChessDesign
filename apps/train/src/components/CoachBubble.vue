@@ -86,6 +86,8 @@ const tipSrc = `${base}icons/misc/bubble-tip.svg`
   align-items: flex-start;
   gap: 8px;
   padding: 12px;
+  min-height: 52px;
+  box-sizing: border-box;
 }
 
 .coach-message {
