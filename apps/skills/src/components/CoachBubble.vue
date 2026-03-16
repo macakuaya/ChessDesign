@@ -186,7 +186,7 @@ function onAfterLeave() {
   justify-content: center;
   align-items: flex-start;
   gap: 8px;
-  padding: 16px 12px;
+  padding: 12px;
   min-height: 64px;
 }
 
