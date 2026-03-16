@@ -212,7 +212,6 @@ button.cc-button-component.cc-button-secondary {
   align-items: center;
   justify-content: space-between;
   padding: 0 4px;
-  backdrop-filter: blur(12px);
   position: relative;
 }
 

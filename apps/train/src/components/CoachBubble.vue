@@ -16,7 +16,7 @@ const tipSrc = `${base}icons/misc/bubble-tip.svg`
           <img :src="tipSrc" alt="" />
         </div>
         <div class="bubble-content">
-          <p class="placeholder-text">&nbsp;</p>
+          <p class="coach-message">Coach text goes here!</p>
         </div>
       </div>
     </div>
@@ -85,16 +85,15 @@ const tipSrc = `${base}icons/misc/bubble-tip.svg`
   justify-content: center;
   align-items: flex-start;
   gap: 8px;
-  padding: 12px;
-  min-height: 64px;
+  padding: 16px 12px;
 }
 
-.placeholder-text {
+.coach-message {
   margin: 0;
   font-family: 'SF Pro Text', -apple-system, system-ui, sans-serif;
   font-size: 15px;
   font-weight: 500;
   line-height: 20px;
-  color: #9a9a9a;
+  color: #312e2b;
 }
 </style>
