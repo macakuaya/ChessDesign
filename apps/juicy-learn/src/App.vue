@@ -101,6 +101,11 @@ const ANIMATION_COLORS = {
     coin: '#FA412D',
     textColor: '#E02828',  // --color-red-400 for text
   },
+  winner: {
+    overlay: 'rgba(131, 184, 79, 0.8)',  // green overlay matching production
+    coin: '#83B84F',                       // rgb(131, 184, 79)
+    textColor: '#5B8A34',                  // darker green for text on white pill
+  },
 }
 
 // ============================================
@@ -299,6 +304,7 @@ const movingPiece = ref(null)  // { type, fromSquare, toSquare, startPos, endPos
 const brilliantHighlight = ref(null)  // Square to highlight with brilliant animation
 const checkmateHighlight = ref(null)  // Square for checkmate animation (on checkmated king)
 const checkmateKingColor = ref('black')  // 'black' or 'white' - color of the checkmated king icon
+const winnerHighlight = ref(null)  // Square for winner animation (on winning king)
 
 // Refs for animation target positioning
 const progressBarRef = ref(null)      // Reference to progress bar element
@@ -571,6 +577,9 @@ const hasBrilliantHighlight = (square) => brilliantHighlight.value === square
 // Check if square has checkmate highlight
 const hasCheckmateHighlight = (square) => checkmateHighlight.value === square
 
+// Check if square has winner highlight
+const hasWinnerHighlight = (square) => winnerHighlight.value === square
+
 // Computed: Checkmate king icon name (same as queen: piece-fill-king)
 const checkmateKingIcon = computed(() => 'piece-fill-king')
 
@@ -632,8 +641,9 @@ const loadQuestion = (index) => {
   questionState.value = 'intro'
   selectedSquare.value = null
   lastMove.value = null
-  // Clear checkmate highlight when loading new question
+  // Clear checkmate/winner highlights when loading new question
   checkmateHighlight.value = null
+  winnerHighlight.value = null
   // Reset hint state
   hintHighlightSquare.value = null
   showMoveArrow.value = false
@@ -961,11 +971,22 @@ const triggerCheckmateAnimation = (kingSquare, isBlackKing, onComplete) => {
   fetch('http://127.0.0.1:7244/ingest/9dc99f67-e73d-4770-bc76-e927450ee409',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.vue:666',message:'triggerCheckmateAnimation',data:{kingSquare,isBlackKing,checkmateKingColorSet:isBlackKing?'black':'white'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
   // #endregion
   
-  // After animation completes (800ms), call onComplete for next animations
+  // After animation completes (1300ms), call onComplete for next animations
   // Don't clear checkmateHighlight here - it gets cleared when next animation starts
   setTimeout(() => {
     if (onComplete) nextTick(() => onComplete())
-  }, 800)
+  }, 1300)
+}
+
+// Trigger winner animation on the winning king's square (green crown)
+// Production timing: 300ms fadein → 700ms hold → 300ms exit-to-corner = 1300ms
+// Coin stays in place (cleared on next question via loadQuestion)
+const triggerWinnerAnimation = (kingSquare, onComplete = null) => {
+  winnerHighlight.value = kingSquare
+
+  setTimeout(() => {
+    if (onComplete) nextTick(() => onComplete())
+  }, 1300)
 }
 
 // Auto-play the opponent's response move after an intermediate correct move
@@ -1103,9 +1124,13 @@ const tryMove = (from, to) => {
         // Trigger animations based on move type
         if (isCheckmate) {
           const isBlackKing = currentQuestion.value.fen.includes(' w ')
-          triggerCheckmateAnimation(kingSquare, isBlackKing, () => {
-            triggerCorrectMoveAnimations(to, streak.value)
-          })
+          const winnerPieceType = isBlackKing ? 'wk' : 'bk'
+          const winnerKing = pieces.value.find(p => p.type === winnerPieceType)
+          
+          // Fire checkmate, winner, and correct animations all simultaneously
+          triggerCheckmateAnimation(kingSquare, isBlackKing, null)
+          triggerWinnerAnimation(winnerKing?.square)
+          triggerCorrectMoveAnimations(to, streak.value)
         } else if (isBrilliant) {
           triggerBrilliantAnimation(to, () => {
             triggerCorrectMoveAnimations(to, streak.value)
@@ -1496,6 +1521,34 @@ onUnmounted(() => {
                 class="checkmate-label-bubble"
               >
                 <span class="checkmate-label-text">Checkmate</span>
+              </div>
+
+              <!-- Winner Highlight Overlay (green at 80% opacity) -->
+              <div 
+                v-if="hasWinnerHighlight(square)" 
+                class="winner-highlight-overlay"
+              ></div>
+              
+              <!-- Winner Icon (Crown - slides to corner) -->
+              <div 
+                v-if="hasWinnerHighlight(square)" 
+                class="winner-icon-wrapper"
+              >
+                <CcIcon name="game-crown-4" :size="40" color="white" class="winner-crown-icon" />
+              </div>
+              
+              <!-- Winner Icon Background (green circle at corner) -->
+              <div 
+                v-if="hasWinnerHighlight(square)" 
+                class="winner-icon-bg"
+              ></div>
+              
+              <!-- Winner Label Bubble (white pill with green text) -->
+              <div 
+                v-if="hasWinnerHighlight(square)" 
+                class="winner-label-bubble"
+              >
+                <span class="winner-label-text">Winner!</span>
               </div>
 
               <!-- Intermediate Correct Badge (green coin at top-right, same position as skill/brilliant coins) -->
@@ -2559,14 +2612,14 @@ body {
   opacity: 0;
   z-index: 2;
   pointer-events: none;
-  animation: checkmate-overlay-animate 800ms cubic-bezier(0, 0, 0.4, 1) forwards;
+  animation: checkmate-overlay-animate 1300ms cubic-bezier(0, 0, 0.4, 1) forwards;
 }
 
 @keyframes checkmate-overlay-animate {
   0% { opacity: 0; }
-  37.5% { opacity: 0.8; }
-  62.5% { opacity: 0.8; }
-  100% { opacity: 0; }  /* Fades out like brilliant */
+  23.1% { opacity: 0.8; }      /* 300ms */
+  76.9% { opacity: 0.8; }      /* 1000ms */
+  100% { opacity: 0; }
 }
 
 /* Checkmate Icon Wrapper - contains the king icon - scaled 1.8x */
@@ -2578,8 +2631,7 @@ body {
   align-items: center;
   justify-content: center;
   filter: drop-shadow(0px 2px 0px rgba(0, 0, 0, 0.25));
-  /* 800ms animation - no falling, stays at final position */
-  animation: checkmate-icon-animate 800ms cubic-bezier(0, 0, 0.4, 1) forwards;
+  animation: checkmate-icon-animate 1300ms cubic-bezier(0, 0, 0.4, 1) forwards;
 }
 
 /* Rotated king icon (defeated/fallen look) */
@@ -2600,41 +2652,37 @@ body {
 }
 
 @keyframes checkmate-icon-animate {
-  /* State 1 (0ms) - centered, faded - 42px */
   0% {
-    opacity: 0.1;
-    width: 42px;
-    height: 42px;
-    top: 50%;
+    opacity: 0;
+    width: 51px;
+    height: 51px;
+    top: 62.5%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(0.4);
   }
-  /* State 2 (300ms = 37.5%) - centered, visible, 51px (60% of 85px square) */
-  37.5% {
+  23.1% {
     opacity: 1;
     width: 51px;
     height: 51px;
-    top: 55%;
+    top: 62.5%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(1);
   }
-  /* Hold State 2 (500ms = 62.5%) */
-  62.5% {
+  76.9% {
     opacity: 1;
     width: 51px;
     height: 51px;
-    top: 55%;
+    top: 62.5%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(1);
   }
-  /* State 3: in red coin at top right (800ms = 100%) */
   100% {
     opacity: 1;
-    width: 29px;
-    height: 29px;
+    width: 51px;
+    height: 51px;
     top: 7px;
     left: 90%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(0.55);
   }
 }
 
@@ -2653,12 +2701,10 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 18px;
-  /* 800ms animation - no falling, stays at final position */
-  animation: checkmate-pill-animate 800ms cubic-bezier(0, 0, 0.4, 1) forwards;
+  animation: checkmate-pill-animate 1300ms cubic-bezier(0, 0, 0.4, 1) forwards;
 }
 
 @keyframes checkmate-pill-animate {
-  /* State 1: centered, faded (0ms) */
   0% {
     opacity: 0;
     top: 50%;
@@ -2668,8 +2714,7 @@ body {
     padding: 0 11px;
     background: white;
   }
-  /* State 2: at top, visible, white pill (300ms = 37.5%) */
-  37.5% {
+  23.1% {
     opacity: 1;
     top: -11px;
     left: 90%;
@@ -2678,8 +2723,7 @@ body {
     padding: 0 11px;
     background: white;
   }
-  /* Hold State 2 (500ms = 62.5%) */
-  62.5% {
+  76.9% {
     opacity: 1;
     top: -11px;
     left: 90%;
@@ -2688,7 +2732,6 @@ body {
     padding: 0 11px;
     background: white;
   }
-  /* State 3: red circle (800ms = 100%) - scaled from 20px to 36px */
   100% {
     opacity: 1;
     top: -11px;
@@ -2708,13 +2751,169 @@ body {
   line-height: 36px;
   color: v-bind('ANIMATION_COLORS.checkmate.textColor');
   white-space: nowrap;
-  animation: checkmate-text-fade 800ms cubic-bezier(0, 0, 0.4, 1) forwards;
+  animation: checkmate-text-fade 1300ms cubic-bezier(0, 0, 0.4, 1) forwards;
 }
 
 @keyframes checkmate-text-fade {
   0% { opacity: 0; }
-  37.5% { opacity: 1; }
-  62.5% { opacity: 1; }
+  23.1% { opacity: 1; }
+  76.9% { opacity: 1; }
   100% { opacity: 0; }
+}
+
+/* ========== WINNER HIGHLIGHT ANIMATIONS (green crown on winning king) ========== */
+/* Production timing: 0.3s entry, 0.7s hold, 0.3s exit-to-corner = 1.3s total */
+/* Coin stays on board (cleared on next question) */
+
+/* Winner Highlight Overlay - green fadein/fadeout */
+.winner-highlight-overlay {
+  position: absolute;
+  inset: 0;
+  background: v-bind('ANIMATION_COLORS.winner.overlay');
+  opacity: 0;
+  z-index: 2;
+  pointer-events: none;
+  animation: winner-overlay 1300ms ease forwards;
+}
+
+@keyframes winner-overlay {
+  0% { opacity: 0; }
+  23.1% { opacity: 0.8; }      /* 300ms */
+  76.9% { opacity: 0.8; }      /* 1000ms */
+  100% { opacity: 0; }         /* 1300ms */
+}
+
+/* Winner Icon Wrapper - crown fadeingrow centered → slidecorner */
+.winner-icon-wrapper {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0px 2px 0px rgba(0, 0, 0, 0.25));
+  animation: winner-icon-anim 1300ms ease forwards;
+}
+
+.winner-crown-icon {
+  width: 100% !important;
+  height: 100% !important;
+}
+.winner-crown-icon :deep(svg) {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+@keyframes winner-icon-anim {
+  0% {
+    opacity: 0;
+    width: 40px;
+    height: 40px;
+    top: 62.5%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  23.1% {
+    opacity: 1;
+    width: 40px;
+    height: 40px;
+    top: 62.5%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  76.9% {
+    opacity: 1;
+    width: 40px;
+    height: 40px;
+    top: 62.5%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 1;
+    width: 40px;
+    height: 40px;
+    top: 7px;
+    left: 90%;
+    transform: translate(-50%, -50%) scale(0.55);
+  }
+}
+
+/* Winner Icon Background - green circle, expands at corner during exit phase */
+.winner-icon-bg {
+  position: absolute;
+  top: 7px;
+  left: 90%;
+  transform: translate(-50%, -50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: v-bind('ANIMATION_COLORS.winner.coin');
+  z-index: 4;
+  pointer-events: none;
+  filter: drop-shadow(0px 2px 0px rgba(0, 0, 0, 0.25));
+  animation: winner-icon-bg-anim 1300ms ease forwards;
+}
+
+@keyframes winner-icon-bg-anim {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+  76.9% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* Winner Label Bubble - white pill with green text, slides in → shrinks out */
+.winner-label-bubble {
+  position: absolute;
+  top: -14px;
+  left: 90%;
+  height: 36px;
+  z-index: 6;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0px 2px 0px rgba(0, 0, 0, 0.15);
+  animation: winner-text-anim 1300ms ease forwards;
+}
+
+.winner-label-text {
+  font-family: 'Chess Sans', system-ui, sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 36px;
+  color: v-bind('ANIMATION_COLORS.winner.textColor');
+  white-space: nowrap;
+  padding: 0 11px;
+}
+
+@keyframes winner-text-anim {
+  0% {
+    opacity: 0;
+    max-width: 200px;
+    transform: translate(-50%, -120%);
+    transform-origin: center center;
+  }
+  23.1% {
+    opacity: 1;
+    max-width: 200px;
+    transform: translate(-50%, 0);
+    transform-origin: center center;
+  }
+  76.9% {
+    opacity: 1;
+    max-width: 200px;
+    transform: translate(-50%, 0);
+    transform-origin: center center;
+  }
+  100% {
+    opacity: 0;
+    max-width: 0;
+    transform: translate(-50%, 0);
+    transform-origin: center center;
+  }
 }
 </style>
