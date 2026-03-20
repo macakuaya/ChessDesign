@@ -144,6 +144,7 @@ const lessons = [
       {
         fen: '6k1/1p3pp1/p5q1/8/7R/7P/3Q1PP1/6K1 w - - 0 0',
         correctMove: { from: 'd2', to: 'd8', piece: 'Q' }, // Qd8#
+        brilliant: true,
         kingSquare: 'g8',  // Checkmated king's square
         intro: 'White can check with the queen or with the rook. Which one is checkmate?',
         wrong: "There's a possible checkmate, but that's not it. Look at your checks and try again.",
@@ -1127,10 +1128,17 @@ const tryMove = (from, to) => {
           const winnerPieceType = isBlackKing ? 'wk' : 'bk'
           const winnerKing = pieces.value.find(p => p.type === winnerPieceType)
           
-          // Fire checkmate, winner, and correct animations all simultaneously
+          // Fire checkmate + winner on king squares, correct coins on move square
           triggerCheckmateAnimation(kingSquare, isBlackKing, null)
           triggerWinnerAnimation(winnerKing?.square)
-          triggerCorrectMoveAnimations(to, streak.value)
+          if (isBrilliant) {
+            // Brilliant checkmate: brilliant on the move square, correct coins after splashFadeOut
+            triggerBrilliantAnimation(to, () => {
+              triggerCorrectMoveAnimations(to, streak.value)
+            })
+          } else {
+            triggerCorrectMoveAnimations(to, streak.value)
+          }
         } else if (isBrilliant) {
           triggerBrilliantAnimation(to, () => {
             triggerCorrectMoveAnimations(to, streak.value)
