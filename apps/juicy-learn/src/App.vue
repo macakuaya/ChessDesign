@@ -275,6 +275,7 @@ const lastMove = ref(null) // { from, to }
 const continuationActive = ref(false)  // true when playing a continuation sub-move
 const continuationData = ref(null)     // stores the continuation object from question data
 const intermediateCorrectSquare = ref(null) // square for intermediate correct animation
+const correctBadgeSquare = ref(null) // persistent checkmark after flying points
 
 // Hint state
 const hintHighlightSquare = ref(null)  // square to highlight with blue overlay (piece to move)
@@ -639,6 +640,7 @@ const loadQuestion = (index) => {
   continuationActive.value = false
   continuationData.value = null
   intermediateCorrectSquare.value = null
+  correctBadgeSquare.value = null
 }
 
 // Get piece on a specific square
@@ -904,6 +906,10 @@ const triggerCorrectMoveAnimations = (square, streakNumber) => {
         },
         null
       )
+      // Show badge when the streak coin reaches its top-right resting position (800ms into streak animation)
+      setTimeout(() => {
+        correctBadgeSquare.value = square
+      }, 800)
     }
   )
 }
@@ -1473,6 +1479,17 @@ onUnmounted(() => {
               <div 
                 v-if="intermediateCorrectSquare === square" 
                 class="intermediate-correct-badge"
+              >
+                <svg width="29" height="29" viewBox="0 0 29 29" fill="none">
+                  <circle cx="14.5" cy="14.5" r="14.5" fill="#81B64C"/>
+                  <path d="M8.5 15L12.5 19L20.5 11" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+
+              <!-- Persistent Correct Badge (after flying points complete) -->
+              <div 
+                v-if="correctBadgeSquare === square" 
+                class="correct-badge"
               >
                 <svg width="29" height="29" viewBox="0 0 29 29" fill="none">
                   <circle cx="14.5" cy="14.5" r="14.5" fill="#81B64C"/>
@@ -2081,6 +2098,20 @@ body {
   width: 29px;
   height: 29px;
   z-index: 5;
+  pointer-events: none;
+  filter: drop-shadow(0px 2px 0px rgba(0, 0, 0, 0.25));
+}
+
+/* ========== PERSISTENT CORRECT BADGE ========== */
+
+.correct-badge {
+  position: absolute;
+  top: 7px;
+  left: 90%;
+  transform: translate(-50%, -50%);
+  width: 29px;
+  height: 29px;
+  z-index: 3;
   pointer-events: none;
   filter: drop-shadow(0px 2px 0px rgba(0, 0, 0, 0.25));
 }
