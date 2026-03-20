@@ -18,7 +18,7 @@ import { Vue3Lottie } from 'vue3-lottie'
 const activePly = ref(0)
 const showSkillsSheet = ref(false)
 const showPrototypeMenu = ref(false)
-const validPrototypes = ['skill-point-earned', 'ftue', 'end-of-ftue', 'mastered-skill', 'two-mastered-skills', 'all-skills-mastered']
+const validPrototypes = ['skill-point-earned', 'point-plus-point', 'ftue', 'end-of-ftue', 'mastered-skill', 'two-mastered-skills', 'all-skills-mastered']
 const urlPrototype = new URLSearchParams(window.location.search).get('prototype')
 const initialPrototype = (urlPrototype && validPrototypes.includes(urlPrototype)) ? urlPrototype : (localStorage.getItem('selectedPrototype') || 'skill-point-earned')
 const selectedPrototype = ref(initialPrototype)
@@ -51,6 +51,11 @@ const revealedSkillPlies = ref([]) // Track which skill plies have been revealed
 const captureCount = ref(0)
 const checkCount = ref(0)
 const checkmateCount = ref(0)
+
+// Point + Point counters
+const forkCount = ref(3)
+const royalForkCount = ref(8)
+const pointPlusPointPhase = ref(0) // 0 = idle, 1 = first skill animating, 2 = second skill animating
 
 // Board celebration state
 const showBoardCelebration = ref(false)
@@ -286,6 +291,21 @@ const skillsList = computed(() => [
   { name: 'Check', current: 0, max: 10, icon: 'check' },
 ])
 
+// Point + Point skills list: Fork (low progress) and Royal Fork (high progress)
+const pointPlusPointSkillsList = computed(() => [
+  // Active
+  { name: 'Royal Fork', current: royalForkCount.value, max: 10, icon: 'royal-fork', active: true },
+  { name: 'Queen Sacrifice', current: 0, max: 10, icon: 'queen-sacrifice', active: true },
+  { name: 'Fork', current: forkCount.value, max: 10, icon: 'fork', active: true },
+  // Mastered
+  { name: 'Rook Sacrifice', current: 10, max: 10, icon: 'rook-sacrifice', completed: true },
+  { name: 'Skewer', current: 10, max: 10, icon: 'skewer', completed: true },
+  { name: 'Knight Fork', current: 10, max: 10, icon: 'knight-fork', completed: true },
+  // Inactive
+  { name: 'Defend Piece', current: 0, max: 10, icon: 'defend-piece' },
+  { name: 'Check', current: 0, max: 10, icon: 'check' },
+])
+
 // FTUE skills list - all active at 0/10
 const ftueSkillsList = computed(() => [
   { name: 'Capture', current: captureCount.value, max: 10, icon: 'capturing-dark-bishop', active: true },
@@ -363,6 +383,7 @@ const currentSkillsList = computed(() => {
     if (endOfFtueCompleted.value) return endOfFtueAfterCelebrationSkillsList.value
     return endOfFtueSkillsList.value
   }
+  if (selectedPrototype.value === 'point-plus-point') return pointPlusPointSkillsList.value
   if (selectedPrototype.value === 'mastered-skill') return masteredSkillSkillsList.value
   if (selectedPrototype.value === 'two-mastered-skills') return masteredSkillSkillsList.value
   if (selectedPrototype.value === 'all-skills-mastered') return allSkillsMasteredSkillsList.value
@@ -841,9 +862,11 @@ const ftueMoves = [5, 21, 23] // First capture (Bxb5), First check (Nxg7+), Chec
 const endOfFtueMoves = [23] // Only Checkmate (Be7#)
 const masteredSkillMoves = [18, 19] // Rook sac #1, Rook sac #2 (mastery on second)
 const allSkillsMasteredMoves = [22] // Only Queen sac (completing all skills)
+const pointPlusPointMoves = [18] // Only first rook sac (triggers two skills)
 
 // Get skill moves based on prototype
 function getSkillMoves() {
+  if (selectedPrototype.value === 'point-plus-point') return pointPlusPointMoves
   if (selectedPrototype.value === 'ftue') return ftueMoves
   if (selectedPrototype.value === 'end-of-ftue') return endOfFtueMoves
   if (selectedPrototype.value === 'mastered-skill') return masteredSkillMoves
@@ -1025,10 +1048,16 @@ function initializePrototypeState(prototype) {
   endOfFtueCompleted.value = false
   allSkillsMasteredCompleted.value = false
   twoMasteredSkillsPhase.value = 1
+  forkCount.value = 3
+  royalForkCount.value = 8
+  pointPlusPointPhase.value = 0
   activePly.value = 0
   
   // Set initial state for specific prototypes
-  if (prototype === 'end-of-ftue') {
+  if (prototype === 'point-plus-point') {
+    forkCount.value = 3
+    royalForkCount.value = 8
+  } else if (prototype === 'end-of-ftue') {
     checkmateCount.value = 9 // Start at 9/10
   } else if (prototype === 'mastered-skill') {
     rookSacrificeCount.value = 8 // Start at 8/10, will master after 2 sacrifices
@@ -1058,7 +1087,13 @@ watch(activePly, (newPly, oldPly) => {
     const moveNotation = getMoveAtPly(newPly)
     playMoveSound(moveNotation)
     
-    if (selectedPrototype.value === 'ftue') {
+    if (selectedPrototype.value === 'point-plus-point') {
+      // 18. Bd6 (ply 35) - triggers TWO skill animations sequentially
+      if (newPly === 35 && pointPlusPointPhase.value === 0 && !showSkillEarned.value) {
+        pointPlusPointPhase.value = 1
+        triggerSkillEarned('d6', 35, 'fork')
+      }
+    } else if (selectedPrototype.value === 'ftue') {
       // 4...b5 (ply 8) - Play coach voice-over for counter-gambit commentary
       if (newPly === 8) {
         if (!coachCounterGambitAudio) {
@@ -1176,6 +1211,11 @@ watch(activePly, (newPly, oldPly) => {
       } else if (newPly < 37) {
         resetAnimationState()
       }
+    } else if (selectedPrototype.value === 'point-plus-point') {
+      if (newPly < 35) {
+        resetAnimationState()
+        pointPlusPointPhase.value = 0
+      }
     } else if (selectedPrototype.value === 'two-mastered-skills') {
       // Two Mastered Skills plies: 35, 37
       if (newPly < 35) {
@@ -1261,6 +1301,20 @@ function triggerSkillEarned(square, ply, skillType = 'rook') {
       max: 10,
       iconSrc: `${baseUrl}icons/skills/checkmate-dark.png`
     }
+  } else if (skillType === 'fork') {
+    skillEarnedData.value = {
+      skillName: 'Fork',
+      current: forkCount.value,
+      max: 10,
+      iconSrc: `${baseUrl}icons/skills/skill-fork.svg`
+    }
+  } else if (skillType === 'royal-fork') {
+    skillEarnedData.value = {
+      skillName: 'Royal Fork',
+      current: royalForkCount.value,
+      max: 10,
+      iconSrc: `${baseUrl}icons/skills/skill-fork.svg`
+    }
   }
   
   currentAnimatingPly.value = ply
@@ -1323,6 +1377,11 @@ function closeSkillEarned() {
         checkCount.value++
       } else if (savedSkillType === 'checkmate') {
         checkmateCount.value++
+      } else if (savedSkillType === 'fork') {
+        forkCount.value++
+      } else if (savedSkillType === 'royal-fork') {
+        royalForkCount.value++
+        pointPlusPointPhase.value = 0
       }
       // Mark this ply as revealed (no more gold star) - use spread to trigger reactivity
       if (savedPly && !revealedSkillPlies.value.includes(savedPly)) {
@@ -1441,6 +1500,35 @@ function onCounterComplete() {
     }
     coachFtueAudio.currentTime = 0
     coachFtueAudio.play().catch(e => console.warn('Could not play FTUE audio:', e))
+  }
+  // Point + Point: let first skill persist, then clean reset before second
+  else if (selectedPrototype.value === 'point-plus-point' && pointPlusPointPhase.value === 1) {
+    // Keep skill earned visible for a beat after progress bar fills
+    setTimeout(() => {
+      // Now slide out and clean up
+      showSkillEarned.value = false
+      showExplosion.value = false
+      skillHighlightSquare.value = null
+
+      // After slide-out completes (150ms), update counter and restore move list
+      setTimeout(() => {
+        forkCount.value++
+
+        // Don't mark ply as revealed yet -- keep the skill star visible on the
+        // move list so it's clear the same move triggers a second skill.
+        // The second animation's closeSkillEarned will mark it as revealed.
+
+        pointPlusPointPhase.value = 2
+        currentAnimatingPly.value = null
+        currentSkillType.value = null
+        showMoveList.value = true
+
+        // After move list is visible again, trigger second skill from scratch
+        setTimeout(() => {
+          triggerSkillEarned('d6', 35, 'royal-fork')
+        }, 600)
+      }, 150)
+    }, 500)
   } else {
     // For subsequent skills or non-FTUE prototypes, auto-close after a short delay
     closeSkillEarned()
@@ -1657,6 +1745,11 @@ function onContinueClick() {
       checkCount.value++
     } else if (savedSkillType === 'checkmate') {
       checkmateCount.value++
+    } else if (savedSkillType === 'fork') {
+      forkCount.value++
+    } else if (savedSkillType === 'royal-fork') {
+      royalForkCount.value++
+      pointPlusPointPhase.value = 0
     }
     
     // Mark this ply as revealed

@@ -13,10 +13,11 @@ const dropdownOpen = ref(false)
 
 const examples = [
   { id: 'skill-point-earned', label: 'Skill Point Earned' },
+  { id: 'point-plus-point', label: 'Point + Point' },
   { id: 'ftue', label: 'FTUE' },
   { id: 'end-of-ftue', label: 'End of FTUE' },
   { id: 'mastered-skill', label: 'Mastered Skill' },
-  { id: 'two-mastered-skills', label: 'Two Mastered Skills' },
+  { id: 'two-mastered-skills', label: 'Two Unlocked Skills' },
   { id: 'all-skills-mastered', label: 'All Skills Mastered' },
 ]
 
