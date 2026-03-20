@@ -130,6 +130,7 @@ const lessons = [
       {
         fen: '6k1/5pp1/3Q3p/3b4/8/6P1/5PKP/2r5 w - - 0 1',
         correctMove: { from: 'd6', to: 'd5', piece: 'Q' }, // Qxd5
+        brilliant: true,
         intro: "The black bishop is checking White's king. What is White's best way out of check?",
         wrong: "This move escapes the check, but it's better to capture the black bishop. How can you do that?",
         hint: "Capture the piece that's checking your king.",
@@ -930,13 +931,25 @@ const triggerSkillAnimation = (square, label = 'Correct!', setColor = true) => {
 }
 
 // Trigger brilliant highlight animation on a square
-const triggerBrilliantAnimation = (square) => {
+// Production timing: 1300ms main animation + 100ms wait + 300ms splashFadeOut
+const brilliantFadingOut = ref(false)
+const triggerBrilliantAnimation = (square, onComplete = null) => {
   brilliantHighlight.value = square
+  brilliantFadingOut.value = false
   
-  // Clear after 800ms (no falling, stays on board briefly)
+  // 1300ms main animation + 100ms wait, then splashFadeOut
   setTimeout(() => {
-    brilliantHighlight.value = null
-  }, 1200)
+    brilliantFadingOut.value = true
+    
+    // splashFadeOut: 300ms (scale 1→2 on icon-bg, fade out everything)
+    setTimeout(() => {
+      brilliantHighlight.value = null
+      brilliantFadingOut.value = false
+      if (onComplete) {
+        nextTick(() => onComplete())
+      }
+    }, 300)
+  }, 1400)
 }
 
 // Trigger checkmate animation on the checkmated king's square
@@ -1085,17 +1098,19 @@ const tryMove = (from, to) => {
         // ---- STANDARD FINAL MOVE (no opponent response) ----
         streak.value++
         
-        // Trigger animations based on whether it's a checkmate
+        const isBrilliant = currentQuestion.value.brilliant === true
+        
+        // Trigger animations based on move type
         if (isCheckmate) {
-          // Determine king color based on side to move (FEN has 'w' = white to move, so black king is checkmated)
           const isBlackKing = currentQuestion.value.fen.includes(' w ')
-          
-          // Trigger checkmate animation first, then regular animations
           triggerCheckmateAnimation(kingSquare, isBlackKing, () => {
             triggerCorrectMoveAnimations(to, streak.value)
           })
+        } else if (isBrilliant) {
+          triggerBrilliantAnimation(to, () => {
+            triggerCorrectMoveAnimations(to, streak.value)
+          })
         } else {
-          // Regular two-animation sequence (Correct! then Streak X)
           triggerCorrectMoveAnimations(to, streak.value)
         }
       }
@@ -1437,21 +1452,29 @@ onUnmounted(() => {
                 class="brilliant-highlight-overlay"
               ></div>
               
-              <!-- Brilliant Icon (exclamation double) - scaled 1.8x from 16 to 29 -->
+              <!-- Brilliant Text (slides in from top, then shrinks horizontally) -->
+              <div 
+                v-if="hasBrilliantHighlight(square)" 
+                class="brilliant-text"
+              >
+                <span class="brilliant-text-inner">Brilliant!</span>
+              </div>
+              
+              <!-- Brilliant Icon (exclamation double) -->
               <div 
                 v-if="hasBrilliantHighlight(square)" 
                 class="brilliant-icon-wrapper"
+                :class="{ 'splash-fade-out': brilliantFadingOut }"
               >
                 <CcIcon name="move-exclamation-double" :size="51" color="white" class="brilliant-icon" />
               </div>
               
-              <!-- Brilliant Label Bubble (teal, stays on board) -->
+              <!-- Brilliant Icon Background (teal circle, expands at corner) -->
               <div 
                 v-if="hasBrilliantHighlight(square)" 
-                class="brilliant-label-bubble"
-              >
-                <span class="brilliant-label-text">Brilliant!</span>
-              </div>
+                class="brilliant-icon-bg"
+                :class="{ 'splash-fade-out': brilliantFadingOut }"
+              ></div>
 
               <!-- Checkmate Highlight Overlay (red at 80% opacity) -->
               <div 
@@ -2328,10 +2351,11 @@ body {
   100% { opacity: 0; }
 }
 
-/* ========== BRILLIANT HIGHLIGHT ANIMATIONS ========== */
-/* Same as skill animation but with teal color and no falling - scaled 1.8x */
+/* ========== BRILLIANT HIGHLIGHT ANIMATIONS (production-matching) ========== */
+/* Production timing: 0.3s entry, 0.7s hold, 0.3s exit-to-corner = 1.3s total */
+/* Then 100ms wait + 300ms splashFadeOut */
 
-/* Brilliant Highlight Overlay (teal color) */
+/* Brilliant Highlight Overlay - fadein then fadeout */
 .brilliant-highlight-overlay {
   position: absolute;
   inset: 0;
@@ -2339,17 +2363,74 @@ body {
   opacity: 0;
   z-index: 2;
   pointer-events: none;
-  animation: brilliant-overlay-animate 800ms cubic-bezier(0, 0, 0.4, 1) forwards;
+  animation: brilliant-overlay 1300ms ease forwards;
 }
 
-@keyframes brilliant-overlay-animate {
+@keyframes brilliant-overlay {
   0% { opacity: 0; }
-  37.5% { opacity: 0.8; }
-  62.5% { opacity: 0.8; }
-  100% { opacity: 0; }
+  23.1% { opacity: 0.8; }      /* 300ms - fadein done */
+  76.9% { opacity: 0.8; }      /* 1000ms - hold done */
+  100% { opacity: 0; }         /* 1300ms - fadeout done */
 }
 
-/* Brilliant Icon Wrapper - contains the CcIcon - scaled 1.8x */
+/* Brilliant Text - slides in from top, holds, then shrinks horizontally */
+/* Production: left at ~95% of square (icon x-position), translated -50% */
+.brilliant-text {
+  position: absolute;
+  top: -14px;
+  left: 90%;
+  height: 36px;
+  z-index: 6;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0px 2px 0px rgba(0, 0, 0, 0.15);
+  animation: brilliant-text-anim 1300ms ease forwards;
+}
+
+.brilliant-text-inner {
+  font-family: 'Chess Sans', system-ui, sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 36px;
+  color: v-bind('ANIMATION_COLORS.brilliant.textColor');
+  white-space: nowrap;
+  padding: 0 11px;
+}
+
+@keyframes brilliant-text-anim {
+  0% {                          /* 0ms - above, hidden */
+    opacity: 0;
+    max-width: 200px;
+    transform: translate(-50%, -120%);
+    transform-origin: center center;
+  }
+  23.1% {                       /* 300ms - slid into position */
+    opacity: 1;
+    max-width: 200px;
+    transform: translate(-50%, 0);
+    transform-origin: center center;
+  }
+  76.9% {                       /* 1000ms - still visible */
+    opacity: 1;
+    max-width: 200px;
+    transform: translate(-50%, 0);
+    transform-origin: center center;
+  }
+  100% {                        /* 1300ms - shrunk horizontally */
+    opacity: 0;
+    max-width: 0;
+    transform: translate(-50%, 0);
+    transform-origin: center center;
+  }
+}
+
+/* Brilliant Icon - fadeingrow centered, hold, then slidecorner */
 .brilliant-icon-wrapper {
   position: absolute;
   z-index: 5;
@@ -2358,11 +2439,9 @@ body {
   align-items: center;
   justify-content: center;
   filter: drop-shadow(0px 2px 0px rgba(0, 0, 0, 0.25));
-  /* 800ms animation - no falling, stays at final position */
-  animation: brilliant-icon-animate 800ms cubic-bezier(0, 0, 0.4, 1) forwards;
+  animation: brilliant-icon-anim 1300ms ease forwards;
 }
 
-/* Brilliant icon fills its container */
 .brilliant-icon {
   width: 100% !important;
   height: 100% !important;
@@ -2372,123 +2451,100 @@ body {
   height: 100% !important;
 }
 
-@keyframes brilliant-icon-animate {
-  /* State 1 (0ms) - centered, faded - 42px */
-  0% {
-    opacity: 0.1;
-    width: 42px;
-    height: 42px;
+@keyframes brilliant-icon-anim {
+  0% {                          /* 0ms - centered, small, faded */
+    opacity: 0;
+    width: 51px;
+    height: 51px;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(0.4);
   }
-  /* State 2 (300ms = 37.5%) - centered, visible, 51px (60% of 85px square) */
-  37.5% {
+  23.1% {                       /* 300ms - centered, full size */
     opacity: 1;
     width: 51px;
     height: 51px;
-    top: 55%;
+    top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(1);
   }
-  /* Hold State 2 (500ms = 62.5%) */
-  62.5% {
+  76.9% {                       /* 1000ms - still centered (hold) */
     opacity: 1;
     width: 51px;
     height: 51px;
-    top: 55%;
+    top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(1);
   }
-  /* State 3: in teal coin at top right (800ms = 100%) */
-  100% {
+  100% {                        /* 1300ms - at top-right corner */
     opacity: 1;
     width: 29px;
     height: 29px;
     top: 7px;
     left: 90%;
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
-/* Brilliant Label Bubble (white pill → teal circle, stays on board) - scaled 1.8x */
-.brilliant-label-bubble {
+/* Brilliant Icon Background - teal circle, expands at corner during exit phase */
+.brilliant-icon-bg {
   position: absolute;
+  top: 7px;
   left: 90%;
-  top: -11px;
+  transform: translate(-50%, -50%);
+  width: 36px;
   height: 36px;
+  border-radius: 50%;
+  background: v-bind('ANIMATION_COLORS.brilliant.coin');
   z-index: 4;
   pointer-events: none;
-  box-shadow: 0px 2px 0px rgba(0, 0, 0, 0.15);
-  white-space: nowrap;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 18px;
-  /* 800ms animation - no falling, stays at final position */
-  animation: brilliant-pill-animate 800ms cubic-bezier(0, 0, 0.4, 1) forwards;
+  filter: drop-shadow(0px 2px 0px rgba(0, 0, 0, 0.25));
+  animation: brilliant-icon-bg-anim 1300ms ease forwards;
 }
 
-@keyframes brilliant-pill-animate {
-  /* State 1: centered, faded (0ms) */
+@keyframes brilliant-icon-bg-anim {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+  76.9% { opacity: 0; transform: translate(-50%, -50%) scale(0); }   /* hidden until 1000ms */
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }    /* 1300ms - fully expanded */
+}
+
+/* splashFadeOut: icon fades, icon-bg scales up + fades (300ms) */
+.brilliant-icon-wrapper.splash-fade-out {
+  animation: brilliant-icon-splash 300ms cubic-bezier(0, 0, 0.4, 1) forwards;
+}
+
+@keyframes brilliant-icon-splash {
   0% {
-    opacity: 0;
-    top: 50%;
-    left: 90%;
-    transform: translate(-50%, -50%);
-    max-width: 200px;
-    padding: 0 11px;
-    background: white;
-  }
-  /* State 2: at top, visible, white pill (300ms = 37.5%) */
-  37.5% {
     opacity: 1;
-    top: -11px;
+    width: 29px;
+    height: 29px;
+    top: 7px;
     left: 90%;
-    transform: translate(-50%, 0);
-    max-width: 200px;
-    padding: 0 11px;
-    background: white;
+    transform: translate(-50%, -50%) scale(1);
   }
-  /* Hold State 2 (500ms = 62.5%) */
-  62.5% {
-    opacity: 1;
-    top: -11px;
-    left: 90%;
-    transform: translate(-50%, 0);
-    max-width: 200px;
-    padding: 0 11px;
-    background: white;
-  }
-  /* State 3: teal circle (800ms = 100%) - scaled from 20px to 36px */
   100% {
-    opacity: 1;
-    top: -11px;
+    opacity: 0;
+    width: 29px;
+    height: 29px;
+    top: 7px;
     left: 90%;
-    transform: translate(-50%, 0);
-    max-width: 36px;
-    padding: 0;
-    background: v-bind('ANIMATION_COLORS.brilliant.coin');
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
-/* Text inside the brilliant pill - fades out - scaled 1.8x */
-.brilliant-label-text {
-  font-family: 'Chess Sans', system-ui, sans-serif;
-  font-size: 20px;
-  font-weight: 800;
-  line-height: 36px;
-  color: v-bind('ANIMATION_COLORS.brilliant.textColor');
-  white-space: nowrap;
-  animation: brilliant-text-fade 800ms cubic-bezier(0, 0, 0.4, 1) forwards;
+.brilliant-icon-bg.splash-fade-out {
+  animation: brilliant-icon-bg-splash 300ms cubic-bezier(0, 0, 0.4, 1) forwards;
 }
 
-@keyframes brilliant-text-fade {
-  0% { opacity: 0; }
-  37.5% { opacity: 1; }
-  62.5% { opacity: 1; }
-  100% { opacity: 0; }
+@keyframes brilliant-icon-bg-splash {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2);
+  }
 }
 
 /* ============================================ */
