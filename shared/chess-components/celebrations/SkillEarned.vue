@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
   skillName: { type: String, default: 'Skewers' },
@@ -26,8 +26,11 @@ function getCurrentPercent() {
 }
 
 function getNextPercent() {
-  return Math.round(((props.current + 1) / props.max) * 100)
+  const next = Math.min(props.current + 1, props.max)
+  return Math.round((next / props.max) * 100)
 }
+
+const clampedNext = computed(() => Math.min(props.current + 1, props.max))
 
 // Watch visibility to trigger progress animation
 watch(() => props.visible, (isVisible) => {
@@ -50,7 +53,7 @@ watch(() => props.visible, (isVisible) => {
     setTimeout(() => {
       animatedProgress.value = getNextPercent()
       isCounterAnimating.value = true
-      animatedCounter.value = props.current + 1
+      animatedCounter.value = Math.min(props.current + 1, props.max)
       
       // Emit after counter animation completes (500ms)
       setTimeout(() => {
@@ -89,7 +92,7 @@ watch(() => props.visible, (isVisible) => {
         <span class="skill-counter">
           <span class="counter-slot" :class="{ animating: isCounterAnimating }">
             <span class="counter-value previous">{{ current }}</span>
-            <span class="counter-value next">{{ current + 1 }}</span>
+            <span class="counter-value next">{{ clampedNext }}</span>
           </span>
           <span class="separator">/</span>
           <span class="max">{{ max }}</span>

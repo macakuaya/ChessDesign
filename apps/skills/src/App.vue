@@ -18,7 +18,7 @@ import { Vue3Lottie } from 'vue3-lottie'
 const activePly = ref(0)
 const showSkillsSheet = ref(false)
 const showPrototypeMenu = ref(false)
-const validPrototypes = ['skill-point-earned', 'point-plus-point', 'ftue', 'end-of-ftue', 'mastered-skill', 'two-mastered-skills', 'all-skills-mastered']
+const validPrototypes = ['skill-point-earned', 'point-plus-point', 'point-plus-unlocked', 'ftue', 'end-of-ftue', 'mastered-skill', 'two-mastered-skills', 'all-skills-mastered']
 const urlPrototype = new URLSearchParams(window.location.search).get('prototype')
 const initialPrototype = (urlPrototype && validPrototypes.includes(urlPrototype)) ? urlPrototype : (localStorage.getItem('selectedPrototype') || 'skill-point-earned')
 const selectedPrototype = ref(initialPrototype)
@@ -56,6 +56,7 @@ const checkmateCount = ref(0)
 const forkCount = ref(3)
 const royalForkCount = ref(8)
 const pointPlusPointPhase = ref(0) // 0 = idle, 1 = first skill animating, 2 = second skill animating
+const pointPlusUnlockedPhase = ref(0) // 0 = idle, 1 = first skill (fork), 2 = second skill (rook mastery)
 
 // Board celebration state
 const showBoardCelebration = ref(false)
@@ -306,6 +307,29 @@ const pointPlusPointSkillsList = computed(() => [
   { name: 'Check', current: 0, max: 10, icon: 'check' },
 ])
 
+// Point + Unlocked skills list: Fork (low progress) and Rook Sacrifice (about to master)
+const pointPlusUnlockedSkillsList = computed(() => {
+  const rookMastered = rookSacrificeCount.value >= 10
+  const active = [
+    { name: 'Rook Sacrifice', current: rookSacrificeCount.value, max: 10, icon: 'rook-sacrifice', completed: rookMastered },
+    { name: 'Fork', current: forkCount.value, max: 10, icon: 'fork', active: true },
+  ]
+  if (rookMastered) {
+    active.push({ name: 'Queen Sacrifice', current: 0, max: 10, icon: 'queen-sacrifice', active: true })
+  }
+  const mastered = [
+    { name: 'Skewer', current: 10, max: 10, icon: 'skewer', completed: true },
+    { name: 'Knight Fork', current: 10, max: 10, icon: 'knight-fork', completed: true },
+    { name: 'Royal Fork', current: 10, max: 10, icon: 'royal-fork', completed: true },
+  ]
+  const inactive = [
+    ...(!rookMastered ? [{ name: 'Queen Sacrifice', current: 0, max: 10, icon: 'queen-sacrifice' }] : []),
+    { name: 'Defend Piece', current: 0, max: 10, icon: 'defend-piece' },
+    { name: 'Check', current: 0, max: 10, icon: 'check' },
+  ]
+  return [...active, ...mastered, ...inactive]
+})
+
 // FTUE skills list - all active at 0/10
 const ftueSkillsList = computed(() => [
   { name: 'Capture', current: captureCount.value, max: 10, icon: 'capturing-dark-bishop', active: true },
@@ -384,6 +408,7 @@ const currentSkillsList = computed(() => {
     return endOfFtueSkillsList.value
   }
   if (selectedPrototype.value === 'point-plus-point') return pointPlusPointSkillsList.value
+  if (selectedPrototype.value === 'point-plus-unlocked') return pointPlusUnlockedSkillsList.value
   if (selectedPrototype.value === 'mastered-skill') return masteredSkillSkillsList.value
   if (selectedPrototype.value === 'two-mastered-skills') return masteredSkillSkillsList.value
   if (selectedPrototype.value === 'all-skills-mastered') return allSkillsMasteredSkillsList.value
@@ -867,6 +892,7 @@ const pointPlusPointMoves = [18] // Only first rook sac (triggers two skills)
 // Get skill moves based on prototype
 function getSkillMoves() {
   if (selectedPrototype.value === 'point-plus-point') return pointPlusPointMoves
+  if (selectedPrototype.value === 'point-plus-unlocked') return pointPlusPointMoves
   if (selectedPrototype.value === 'ftue') return ftueMoves
   if (selectedPrototype.value === 'end-of-ftue') return endOfFtueMoves
   if (selectedPrototype.value === 'mastered-skill') return masteredSkillMoves
@@ -1051,12 +1077,16 @@ function initializePrototypeState(prototype) {
   forkCount.value = 3
   royalForkCount.value = 8
   pointPlusPointPhase.value = 0
+  pointPlusUnlockedPhase.value = 0
   activePly.value = 0
   
   // Set initial state for specific prototypes
   if (prototype === 'point-plus-point') {
     forkCount.value = 3
     royalForkCount.value = 8
+  } else if (prototype === 'point-plus-unlocked') {
+    forkCount.value = 3
+    rookSacrificeCount.value = 9
   } else if (prototype === 'end-of-ftue') {
     checkmateCount.value = 9 // Start at 9/10
   } else if (prototype === 'mastered-skill') {
@@ -1091,6 +1121,12 @@ watch(activePly, (newPly, oldPly) => {
       // 18. Bd6 (ply 35) - triggers TWO skill animations sequentially
       if (newPly === 35 && pointPlusPointPhase.value === 0 && !showSkillEarned.value) {
         pointPlusPointPhase.value = 1
+        triggerSkillEarned('d6', 35, 'fork')
+      }
+    } else if (selectedPrototype.value === 'point-plus-unlocked') {
+      // 18. Bd6 (ply 35) - first Fork point, then Rook Sacrifice mastery
+      if (newPly === 35 && pointPlusUnlockedPhase.value === 0 && !showSkillEarned.value) {
+        pointPlusUnlockedPhase.value = 1
         triggerSkillEarned('d6', 35, 'fork')
       }
     } else if (selectedPrototype.value === 'ftue') {
@@ -1215,6 +1251,15 @@ watch(activePly, (newPly, oldPly) => {
       if (newPly < 35) {
         resetAnimationState()
         pointPlusPointPhase.value = 0
+        forkCount.value = 3
+        royalForkCount.value = 8
+      }
+    } else if (selectedPrototype.value === 'point-plus-unlocked') {
+      if (newPly < 35) {
+        resetAnimationState()
+        pointPlusUnlockedPhase.value = 0
+        forkCount.value = 3
+        rookSacrificeCount.value = 9
       }
     } else if (selectedPrototype.value === 'two-mastered-skills') {
       // Two Mastered Skills plies: 35, 37
@@ -1354,6 +1399,9 @@ function triggerSkillEarned(square, ply, skillType = 'rook') {
 function closeSkillEarned() {
   // Don't close during celebration - wait for Continue button
   if (showBoardCelebration.value) return
+  // Don't auto-close during multi-phase animations (phase 1 has its own handler)
+  if (selectedPrototype.value === 'point-plus-point' && pointPlusPointPhase.value === 1) return
+  if (selectedPrototype.value === 'point-plus-unlocked' && pointPlusUnlockedPhase.value === 1) return
   
   if (showSkillEarned.value) {
     const savedPly = currentAnimatingPly.value
@@ -1425,7 +1473,7 @@ function closeBoardCelebration() {
 // Handle counter animation complete - show celebration for first skill or mastery
 function onCounterComplete() {
   // Check for mastery celebration (skill reaches 10/10)
-  if ((selectedPrototype.value === 'mastered-skill' || selectedPrototype.value === 'two-mastered-skills') && currentSkillType.value === 'rook' && rookSacrificeCount.value === 9) {
+  if ((selectedPrototype.value === 'mastered-skill' || selectedPrototype.value === 'two-mastered-skills' || selectedPrototype.value === 'point-plus-unlocked') && currentSkillType.value === 'rook' && rookSacrificeCount.value === 9) {
     // This is the second rook sacrifice, will become 10/10 (mastery!)
     boardCelebrationData.value = {
       image: `${import.meta.env.BASE_URL}icons/skills/white_rook.png`,
@@ -1529,6 +1577,27 @@ function onCounterComplete() {
         }, 600)
       }, 150)
     }, 500)
+  }
+  // Point + Unlocked phase 1: same clean reset, then trigger rook sacrifice mastery
+  else if (selectedPrototype.value === 'point-plus-unlocked' && pointPlusUnlockedPhase.value === 1) {
+    setTimeout(() => {
+      showSkillEarned.value = false
+      showExplosion.value = false
+      skillHighlightSquare.value = null
+
+      setTimeout(() => {
+        forkCount.value++
+
+        pointPlusUnlockedPhase.value = 2
+        currentAnimatingPly.value = null
+        currentSkillType.value = null
+        showMoveList.value = true
+
+        setTimeout(() => {
+          triggerSkillEarned('d6', 35, 'rook')
+        }, 600)
+      }, 150)
+    }, 500)
   } else {
     // For subsequent skills or non-FTUE prototypes, auto-close after a short delay
     closeSkillEarned()
@@ -1542,7 +1611,7 @@ function onContinueClick() {
   const savedSkillType = currentSkillType.value
   
   // Check if this is a mastery celebration (mastered-skill or two-mastered-skills prototype, second rook sacrifice)
-  const isMasteryCelebration = (selectedPrototype.value === 'mastered-skill' || selectedPrototype.value === 'two-mastered-skills') && 
+  const isMasteryCelebration = (selectedPrototype.value === 'mastered-skill' || selectedPrototype.value === 'two-mastered-skills' || selectedPrototype.value === 'point-plus-unlocked') && 
     savedSkillType === 'rook' && 
     rookSacrificeCount.value === 9
   
