@@ -135,7 +135,7 @@ const lessons = [
       {
         fen: '6k1/5pp1/3Q3p/3b4/8/6P1/5PKP/2r5 w - - 0 1',
         correctMove: { from: 'd6', to: 'd5', piece: 'Q' }, // Qxd5
-        brilliant: true,
+        // brilliant: true,
         intro: "The black bishop is checking White's king. What is White's best way out of check?",
         wrong: "This move escapes the check, but it's better to capture the black bishop. How can you do that?",
         hint: "Capture the piece that's checking your king.",
@@ -144,7 +144,7 @@ const lessons = [
       {
         fen: '6k1/1p3pp1/p5q1/8/7R/7P/3Q1PP1/6K1 w - - 0 0',
         correctMove: { from: 'd2', to: 'd8', piece: 'Q' }, // Qd8#
-        brilliant: true,
+        // brilliant: true,
         kingSquare: 'g8',  // Checkmated king's square
         intro: 'White can check with the queen or with the rook. Which one is checkmate?',
         wrong: "There's a possible checkmate, but that's not it. Look at your checks and try again.",
@@ -1120,7 +1120,7 @@ const tryMove = (from, to) => {
         // ---- STANDARD FINAL MOVE (no opponent response) ----
         streak.value++
         
-        const isBrilliant = currentQuestion.value.brilliant === true
+        // const isBrilliant = currentQuestion.value.brilliant === true
         
         // Trigger animations based on move type
         if (isCheckmate) {
@@ -1131,18 +1131,17 @@ const tryMove = (from, to) => {
           // Fire checkmate + winner on king squares, correct coins on move square
           triggerCheckmateAnimation(kingSquare, isBlackKing, null)
           triggerWinnerAnimation(winnerKing?.square)
-          if (isBrilliant) {
-            // Brilliant checkmate: brilliant on the move square, correct coins after splashFadeOut
-            triggerBrilliantAnimation(to, () => {
-              triggerCorrectMoveAnimations(to, streak.value)
-            })
-          } else {
-            triggerCorrectMoveAnimations(to, streak.value)
-          }
-        } else if (isBrilliant) {
-          triggerBrilliantAnimation(to, () => {
-            triggerCorrectMoveAnimations(to, streak.value)
-          })
+          // if (isBrilliant) {
+          //   triggerBrilliantAnimation(to, () => {
+          //     triggerCorrectMoveAnimations(to, streak.value)
+          //   })
+          // } else {
+          triggerCorrectMoveAnimations(to, streak.value)
+          // }
+        // } else if (isBrilliant) {
+        //   triggerBrilliantAnimation(to, () => {
+        //     triggerCorrectMoveAnimations(to, streak.value)
+        //   })
         } else {
           triggerCorrectMoveAnimations(to, streak.value)
         }
@@ -1479,21 +1478,17 @@ onUnmounted(() => {
                 <span class="skill-label-text">{{ skillHighlightLabel }}</span>
               </div>
 
-              <!-- Brilliant Highlight Overlay (teal color) -->
+              <!-- Brilliant animations commented out
               <div 
                 v-if="hasBrilliantHighlight(square)" 
                 class="brilliant-highlight-overlay"
               ></div>
-              
-              <!-- Brilliant Text (slides in from top, then shrinks horizontally) -->
               <div 
                 v-if="hasBrilliantHighlight(square)" 
                 class="brilliant-text"
               >
                 <span class="brilliant-text-inner">Brilliant!</span>
               </div>
-              
-              <!-- Brilliant Icon (exclamation double) -->
               <div 
                 v-if="hasBrilliantHighlight(square)" 
                 class="brilliant-icon-wrapper"
@@ -1501,13 +1496,12 @@ onUnmounted(() => {
               >
                 <CcIcon name="move-exclamation-double" :size="51" color="white" class="brilliant-icon" />
               </div>
-              
-              <!-- Brilliant Icon Background (teal circle, expands at corner) -->
               <div 
                 v-if="hasBrilliantHighlight(square)" 
                 class="brilliant-icon-bg"
                 :class="{ 'splash-fade-out': brilliantFadingOut }"
               ></div>
+              -->
 
               <!-- Checkmate Highlight Overlay (red at 80% opacity) -->
               <div 
