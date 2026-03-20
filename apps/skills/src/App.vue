@@ -18,7 +18,7 @@ import { Vue3Lottie } from 'vue3-lottie'
 const activePly = ref(0)
 const showSkillsSheet = ref(false)
 const showPrototypeMenu = ref(false)
-const validPrototypes = ['skill-point-earned', 'point-plus-point', 'point-plus-unlocked', 'ftue', 'end-of-ftue', 'mastered-skill', 'two-mastered-skills', 'all-skills-mastered']
+const validPrototypes = ['skill-point-earned', 'point-plus-point', 'point-plus-unlocked', 'unlock-plus-unlock', 'ftue', 'end-of-ftue', 'mastered-skill', 'two-mastered-skills', 'all-skills-mastered']
 const urlPrototype = new URLSearchParams(window.location.search).get('prototype')
 const initialPrototype = (urlPrototype && validPrototypes.includes(urlPrototype)) ? urlPrototype : (localStorage.getItem('selectedPrototype') || 'skill-point-earned')
 const selectedPrototype = ref(initialPrototype)
@@ -57,6 +57,10 @@ const forkCount = ref(3)
 const royalForkCount = ref(8)
 const pointPlusPointPhase = ref(0) // 0 = idle, 1 = first skill animating, 2 = second skill animating
 const pointPlusUnlockedPhase = ref(0) // 0 = idle, 1 = first skill (fork), 2 = second skill (rook mastery)
+
+// Unlock + Unlock counters
+const powerfulBishopCount = ref(9)
+const unlockPlusUnlockPhase = ref(0) // 0 = idle, 1 = first skill (bishop), 2 = second skill (rook)
 
 // Board celebration state
 const showBoardCelebration = ref(false)
@@ -330,6 +334,34 @@ const pointPlusUnlockedSkillsList = computed(() => {
   return [...active, ...mastered, ...inactive]
 })
 
+// Unlock + Unlock skills list: Powerful Bishop (9/10) and Rook Sacrifice (9/10), both about to master
+const unlockPlusUnlockSkillsList = computed(() => {
+  const bishopMastered = powerfulBishopCount.value >= 10
+  const rookMastered = rookSacrificeCount.value >= 10
+  const active = [
+    { name: 'Powerful Bishop', current: powerfulBishopCount.value, max: 10, icon: 'capturing-dark-bishop', completed: bishopMastered },
+    { name: 'Rook Sacrifice', current: rookSacrificeCount.value, max: 10, icon: 'rook-sacrifice', completed: rookMastered },
+  ]
+  if (bishopMastered) {
+    active.push({ name: 'Rook to Open File', current: 0, max: 10, icon: 'rook-sacrifice', active: true })
+  }
+  if (rookMastered) {
+    active.push({ name: 'Queen Sacrifice', current: 0, max: 10, icon: 'queen-sacrifice', active: true })
+  }
+  const mastered = [
+    { name: 'Skewer', current: 10, max: 10, icon: 'skewer', completed: true },
+    { name: 'Knight Fork', current: 10, max: 10, icon: 'knight-fork', completed: true },
+    { name: 'Fork', current: 10, max: 10, icon: 'fork', completed: true },
+  ]
+  const inactive = [
+    ...(!bishopMastered ? [{ name: 'Rook to Open File', current: 0, max: 10, icon: 'rook-sacrifice' }] : []),
+    ...(!rookMastered ? [{ name: 'Queen Sacrifice', current: 0, max: 10, icon: 'queen-sacrifice' }] : []),
+    { name: 'Defend Piece', current: 0, max: 10, icon: 'defend-piece' },
+    { name: 'Check', current: 0, max: 10, icon: 'check' },
+  ]
+  return [...active, ...mastered, ...inactive]
+})
+
 // FTUE skills list - all active at 0/10
 const ftueSkillsList = computed(() => [
   { name: 'Capture', current: captureCount.value, max: 10, icon: 'capturing-dark-bishop', active: true },
@@ -409,6 +441,7 @@ const currentSkillsList = computed(() => {
   }
   if (selectedPrototype.value === 'point-plus-point') return pointPlusPointSkillsList.value
   if (selectedPrototype.value === 'point-plus-unlocked') return pointPlusUnlockedSkillsList.value
+  if (selectedPrototype.value === 'unlock-plus-unlock') return unlockPlusUnlockSkillsList.value
   if (selectedPrototype.value === 'mastered-skill') return masteredSkillSkillsList.value
   if (selectedPrototype.value === 'two-mastered-skills') return masteredSkillSkillsList.value
   if (selectedPrototype.value === 'all-skills-mastered') return allSkillsMasteredSkillsList.value
@@ -893,6 +926,7 @@ const pointPlusPointMoves = [18] // Only first rook sac (triggers two skills)
 function getSkillMoves() {
   if (selectedPrototype.value === 'point-plus-point') return pointPlusPointMoves
   if (selectedPrototype.value === 'point-plus-unlocked') return pointPlusPointMoves
+  if (selectedPrototype.value === 'unlock-plus-unlock') return pointPlusPointMoves
   if (selectedPrototype.value === 'ftue') return ftueMoves
   if (selectedPrototype.value === 'end-of-ftue') return endOfFtueMoves
   if (selectedPrototype.value === 'mastered-skill') return masteredSkillMoves
@@ -1078,6 +1112,8 @@ function initializePrototypeState(prototype) {
   royalForkCount.value = 8
   pointPlusPointPhase.value = 0
   pointPlusUnlockedPhase.value = 0
+  unlockPlusUnlockPhase.value = 0
+  powerfulBishopCount.value = 9
   activePly.value = 0
   
   // Set initial state for specific prototypes
@@ -1095,6 +1131,9 @@ function initializePrototypeState(prototype) {
     rookSacrificeCount.value = 8 // Start at 8/10, will master after 2 sacrifices
   } else if (prototype === 'all-skills-mastered') {
     queenSacrificeCount.value = 9 // Start at 9/10, completing this masters ALL skills
+  } else if (prototype === 'unlock-plus-unlock') {
+    powerfulBishopCount.value = 9
+    rookSacrificeCount.value = 9
   }
 }
 
@@ -1128,6 +1167,12 @@ watch(activePly, (newPly, oldPly) => {
       if (newPly === 35 && pointPlusUnlockedPhase.value === 0 && !showSkillEarned.value) {
         pointPlusUnlockedPhase.value = 1
         triggerSkillEarned('d6', 35, 'fork')
+      }
+    } else if (selectedPrototype.value === 'unlock-plus-unlock') {
+      // 18. Bd6 (ply 35) - first Powerful Bishop mastery, then Rook Sacrifice mastery
+      if (newPly === 35 && unlockPlusUnlockPhase.value === 0 && !showSkillEarned.value) {
+        unlockPlusUnlockPhase.value = 1
+        triggerSkillEarned('d6', 35, 'powerful-bishop')
       }
     } else if (selectedPrototype.value === 'ftue') {
       // 4...b5 (ply 8) - Play coach voice-over for counter-gambit commentary
@@ -1261,6 +1306,16 @@ watch(activePly, (newPly, oldPly) => {
         forkCount.value = 3
         rookSacrificeCount.value = 9
       }
+    } else if (selectedPrototype.value === 'unlock-plus-unlock') {
+      if (newPly < 35) {
+        resetAnimationState()
+        showSkillUnlockedModal.value = false
+        showBoardCelebration.value = false
+        showContinueButton.value = false
+        unlockPlusUnlockPhase.value = 0
+        powerfulBishopCount.value = 9
+        rookSacrificeCount.value = 9
+      }
     } else if (selectedPrototype.value === 'two-mastered-skills') {
       // Two Mastered Skills plies: 35, 37
       if (newPly < 35) {
@@ -1360,6 +1415,13 @@ function triggerSkillEarned(square, ply, skillType = 'rook') {
       max: 10,
       iconSrc: `${baseUrl}icons/skills/skill-fork.svg`
     }
+  } else if (skillType === 'powerful-bishop') {
+    skillEarnedData.value = {
+      skillName: 'Powerful Bishop',
+      current: powerfulBishopCount.value,
+      max: 10,
+      iconSrc: `${baseUrl}icons/skills/capturing-dark-bishop.png`
+    }
   }
   
   currentAnimatingPly.value = ply
@@ -1402,6 +1464,7 @@ function closeSkillEarned() {
   // Don't auto-close during multi-phase animations (phase 1 has its own handler)
   if (selectedPrototype.value === 'point-plus-point' && pointPlusPointPhase.value === 1) return
   if (selectedPrototype.value === 'point-plus-unlocked' && pointPlusUnlockedPhase.value === 1) return
+  if (selectedPrototype.value === 'unlock-plus-unlock' && unlockPlusUnlockPhase.value >= 1) return
   
   if (showSkillEarned.value) {
     const savedPly = currentAnimatingPly.value
@@ -1473,10 +1536,15 @@ function closeBoardCelebration() {
 // Handle counter animation complete - show celebration for first skill or mastery
 function onCounterComplete() {
   // Check for mastery celebration (skill reaches 10/10)
-  if ((selectedPrototype.value === 'mastered-skill' || selectedPrototype.value === 'two-mastered-skills' || selectedPrototype.value === 'point-plus-unlocked') && currentSkillType.value === 'rook' && rookSacrificeCount.value === 9) {
-    // This is the second rook sacrifice, will become 10/10 (mastery!)
+  const isRookMastery = (selectedPrototype.value === 'mastered-skill' || selectedPrototype.value === 'two-mastered-skills' || selectedPrototype.value === 'point-plus-unlocked' || selectedPrototype.value === 'unlock-plus-unlock') && currentSkillType.value === 'rook' && rookSacrificeCount.value === 9
+  const isBishopMastery = selectedPrototype.value === 'unlock-plus-unlock' && currentSkillType.value === 'powerful-bishop' && powerfulBishopCount.value === 9
+
+  if (isRookMastery || isBishopMastery) {
+    const masteryIcon = currentSkillType.value === 'powerful-bishop'
+      ? `${import.meta.env.BASE_URL}icons/skills/capturing-dark-bishop.png`
+      : `${import.meta.env.BASE_URL}icons/skills/white_rook.png`
     boardCelebrationData.value = {
-      image: `${import.meta.env.BASE_URL}icons/skills/white_rook.png`,
+      image: masteryIcon,
       riveFile: null,
       title: 'You Mastered a Skill!',
       subtitle: '',
@@ -1610,10 +1678,14 @@ function onContinueClick() {
   const savedSquare = skillHighlightSquare.value
   const savedSkillType = currentSkillType.value
   
-  // Check if this is a mastery celebration (mastered-skill or two-mastered-skills prototype, second rook sacrifice)
-  const isMasteryCelebration = (selectedPrototype.value === 'mastered-skill' || selectedPrototype.value === 'two-mastered-skills' || selectedPrototype.value === 'point-plus-unlocked') && 
+  // Check if this is a mastery celebration (skill reaches 10/10)
+  const isRookMasteryCelebration = (selectedPrototype.value === 'mastered-skill' || selectedPrototype.value === 'two-mastered-skills' || selectedPrototype.value === 'point-plus-unlocked' || selectedPrototype.value === 'unlock-plus-unlock') && 
     savedSkillType === 'rook' && 
     rookSacrificeCount.value === 9
+  const isBishopMasteryCelebration = selectedPrototype.value === 'unlock-plus-unlock' && 
+    savedSkillType === 'powerful-bishop' && 
+    powerfulBishopCount.value === 9
+  const isMasteryCelebration = isRookMasteryCelebration || isBishopMasteryCelebration
   
   // Check if this is an "all skills mastered" celebration (queen sacrifice completes ALL skills)
   const isAllSkillsMastered = selectedPrototype.value === 'all-skills-mastered' && 
@@ -1719,6 +1791,18 @@ function onContinueClick() {
   }
   
   if (isMasteryCelebration) {
+    // Determine unlock content based on which skill just mastered
+    let transitionImage, heroSkillName, heroSkillDescription
+    if (isBishopMasteryCelebration) {
+      transitionImage = `${import.meta.env.BASE_URL}icons/skills/white_rook.png`
+      heroSkillName = 'Rook to Open File'
+      heroSkillDescription = 'A strategic technique where you place your rook on an open file — a column with no pawns — to control key squares and penetrate the opponent\'s position.'
+    } else {
+      transitionImage = `${import.meta.env.BASE_URL}icons/skills/white_queen.png`
+      heroSkillName = 'Queen Sacrifice'
+      heroSkillDescription = 'A tactical move where you deliberately give up your queen to gain a decisive advantage, often leading to checkmate or winning material back.'
+    }
+
     // Step 1: Fade out current content (200ms)
     boardCelebrationData.value.contentVisible = false
     
@@ -1726,22 +1810,20 @@ function onContinueClick() {
     setTimeout(() => {
       // Change content based on prototype
       if (selectedPrototype.value === 'two-mastered-skills') {
-        // Two Mastered Skills: Show "New Skills Unlocked!" with star icon (like End of FTUE)
         boardCelebrationData.value = {
           image: 'https://www.chess.com/bundles/web/images/color-icons/commerce-gold.svg',
           riveFile: null,
           title: 'New Skills Unlocked!',
           subtitle: '',
-          contentVisible: false // Start hidden
+          contentVisible: false
         }
       } else {
-        // Mastered Skill: Show "New Skill Unlocked" with queen icon
         boardCelebrationData.value = {
-          image: `${import.meta.env.BASE_URL}icons/skills/white_queen.png`,
+          image: transitionImage,
           riveFile: null,
           title: 'New Skill Unlocked',
           subtitle: '',
-          contentVisible: false // Start hidden
+          contentVisible: false
         }
       }
       
@@ -1751,17 +1833,21 @@ function onContinueClick() {
         
         // Step 4: After 2000ms, show the hero modal
         setTimeout(() => {
-          // Hide buttons but keep board celebration visible during modal slide-in
           showSkillEarned.value = false
           skillHighlightSquare.value = null
           showExplosion.value = false
           showContinueButton.value = false
           
-          // Update counter
-          rookSacrificeCount.value++
+          // Increment the correct counter
+          if (savedSkillType === 'powerful-bishop') {
+            powerfulBishopCount.value++
+          } else {
+            rookSacrificeCount.value++
+          }
           
-          // Mark ply as revealed
-          if (savedPly && !revealedSkillPlies.value.includes(savedPly)) {
+          // Don't mark ply as revealed during unlock-plus-unlock phase 1 (defer to phase 2)
+          const deferReveal = selectedPrototype.value === 'unlock-plus-unlock' && unlockPlusUnlockPhase.value === 1
+          if (!deferReveal && savedPly && !revealedSkillPlies.value.includes(savedPly)) {
             revealedSkillPlies.value = [...revealedSkillPlies.value, savedPly]
           }
           
@@ -1770,8 +1856,8 @@ function onContinueClick() {
           
           // Show the hero modal
           skillUnlockedData.value = {
-            skillName: 'Queen Sacrifice',
-            skillDescription: 'A tactical move where you deliberately give up your queen to gain a decisive advantage, often leading to checkmate or winning material back.',
+            skillName: heroSkillName,
+            skillDescription: heroSkillDescription,
             skillImage: '',
             lottieFile: null,
             showShareButton: false,
@@ -1858,6 +1944,19 @@ function onSkillUnlockedContinue() {
       }, 10)
     }, 200)
     
+    return
+  }
+
+  // Unlock + Unlock phase 1: after first hero modal, clean reset then trigger second mastery
+  if (selectedPrototype.value === 'unlock-plus-unlock' && unlockPlusUnlockPhase.value === 1) {
+    showSkillUnlockedModal.value = false
+    showMoveList.value = true
+
+    setTimeout(() => {
+      unlockPlusUnlockPhase.value = 2
+      triggerSkillEarned('d6', 35, 'rook')
+    }, 600)
+
     return
   }
   
