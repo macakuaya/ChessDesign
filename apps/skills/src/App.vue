@@ -1313,6 +1313,7 @@ watch(activePly, (newPly, oldPly) => {
         showBoardCelebration.value = false
         showContinueButton.value = false
         unlockPlusUnlockPhase.value = 0
+        twoMasteredSkillsPhase.value = 1
         powerfulBishopCount.value = 9
         rookSacrificeCount.value = 9
       }
@@ -1790,6 +1791,29 @@ function onContinueClick() {
     return
   }
   
+  // Unlock+Unlock phase 1: skip unlock modal, immediately trigger second skill
+  if (selectedPrototype.value === 'unlock-plus-unlock' && unlockPlusUnlockPhase.value === 1 && isBishopMasteryCelebration) {
+    showBoardCelebration.value = false
+    showContinueButton.value = false
+    showSkillEarned.value = false
+    skillHighlightSquare.value = null
+    showExplosion.value = false
+    
+    coachBubbleMode.value = 'original'
+    showCoachBubble.value = false
+    
+    powerfulBishopCount.value++
+    currentAnimatingPly.value = null
+    currentSkillType.value = null
+    
+    unlockPlusUnlockPhase.value = 2
+    setTimeout(() => {
+      triggerSkillEarned('d6', 35, 'rook')
+    }, 300)
+    
+    return
+  }
+  
   if (isMasteryCelebration) {
     // Determine unlock content based on which skill just mastered
     let transitionImage, heroSkillName, heroSkillDescription
@@ -1803,13 +1827,19 @@ function onContinueClick() {
       heroSkillDescription = 'A tactical move where you deliberately give up your queen to gain a decisive advantage, often leading to checkmate or winning material back.'
     }
 
+    // Unlock+Unlock phase 2: first modal shows Rook to Open File (from bishop mastery)
+    if (selectedPrototype.value === 'unlock-plus-unlock' && unlockPlusUnlockPhase.value === 2) {
+      heroSkillName = 'Rook to Open File'
+      heroSkillDescription = 'A strategic technique where you place your rook on an open file \u2014 a column with no pawns \u2014 to control key squares and penetrate the opponent\'s position.'
+    }
+
     // Step 1: Fade out current content (200ms)
     boardCelebrationData.value.contentVisible = false
     
     // Step 2: After fade out, change content and fade in
     setTimeout(() => {
       // Change content based on prototype
-      if (selectedPrototype.value === 'two-mastered-skills') {
+      if (selectedPrototype.value === 'two-mastered-skills' || (selectedPrototype.value === 'unlock-plus-unlock' && unlockPlusUnlockPhase.value === 2)) {
         boardCelebrationData.value = {
           image: 'https://www.chess.com/bundles/web/images/color-icons/commerce-gold.svg',
           riveFile: null,
@@ -1947,16 +1977,26 @@ function onSkillUnlockedContinue() {
     return
   }
 
-  // Unlock + Unlock phase 1: after first hero modal, clean reset then trigger second mastery
-  if (selectedPrototype.value === 'unlock-plus-unlock' && unlockPlusUnlockPhase.value === 1) {
-    showSkillUnlockedModal.value = false
-    showMoveList.value = true
-
+  // Unlock+Unlock: crossfade between two unlock modals at the end
+  if (selectedPrototype.value === 'unlock-plus-unlock' && twoMasteredSkillsPhase.value === 1) {
+    skillUnlockedData.value.contentVisible = false
+    
     setTimeout(() => {
-      unlockPlusUnlockPhase.value = 2
-      triggerSkillEarned('d6', 35, 'rook')
-    }, 600)
-
+      skillUnlockedData.value = {
+        skillName: 'Queen Sacrifice',
+        skillDescription: 'A tactical move where you deliberately give up your queen to gain a decisive advantage, often leading to checkmate or winning material back.',
+        skillImage: '',
+        lottieFile: null,
+        showShareButton: false,
+        contentVisible: false
+      }
+      
+      setTimeout(() => {
+        skillUnlockedData.value.contentVisible = true
+        twoMasteredSkillsPhase.value = 2
+      }, 10)
+    }, 200)
+    
     return
   }
   
@@ -1965,7 +2005,7 @@ function onSkillUnlockedContinue() {
   showMoveList.value = true
   
   // Reset two mastered skills phase (used by both two-mastered-skills and end-of-ftue)
-  if (selectedPrototype.value === 'two-mastered-skills' || selectedPrototype.value === 'end-of-ftue') {
+  if (selectedPrototype.value === 'two-mastered-skills' || selectedPrototype.value === 'end-of-ftue' || selectedPrototype.value === 'unlock-plus-unlock') {
     twoMasteredSkillsPhase.value = 1
   }
   
