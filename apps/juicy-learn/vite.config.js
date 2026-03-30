@@ -6,8 +6,8 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
 export default defineConfig({
-  // GitHub Pages: macakuaya.github.io/ChessPrototypes/juicy-learn/
-  base: '/ChessPrototypes/juicy-learn/',
+  // GitHub Pages: macakuaya.github.io/ChessDesign/juicy-learn/
+  base: '/ChessDesign/juicy-learn/',
   plugins: [
     vue(),
     vueDevTools(),

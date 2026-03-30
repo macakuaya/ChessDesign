@@ -4,16 +4,16 @@ A monorepo for Chess.com UI prototypes with shared components.
 
 ## Live Demos
 
-- **Landing**: https://macakuaya.github.io/ChessPrototypes/
-- **Daily Puzzle**: https://macakuaya.github.io/ChessPrototypes/new-daily-puzzle/
-- **Notifications**: https://macakuaya.github.io/ChessPrototypes/new-notifications/
-- **Skills**: https://macakuaya.github.io/ChessPrototypes/skills/
-- **Juicy Learn**: https://macakuaya.github.io/ChessPrototypes/juicy-learn/
+- **Landing**: https://macakuaya.github.io/ChessDesign/
+- **Daily Puzzle**: https://macakuaya.github.io/ChessDesign/new-daily-puzzle/
+- **Notifications**: https://macakuaya.github.io/ChessDesign/new-notifications/
+- **Skills**: https://macakuaya.github.io/ChessDesign/skills/
+- **Juicy Learn**: https://macakuaya.github.io/ChessDesign/juicy-learn/
 
 ## Structure
 
 ```
-ChessPrototypes/
+ChessDesign/
 ├── shared/
 │   └── chess-components/        # Shared components (sounds, animations, celebrations)
 ├── apps/
